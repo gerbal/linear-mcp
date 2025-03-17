@@ -11,6 +11,18 @@ A Model Context Protocol (MCP) server that provides tools for interacting with L
   - Create new issues with customizable properties (title, description, team, assignee, priority, labels)
   - List issues with flexible filtering options (team, assignee, status)
   - Update existing issues (title, description, status, assignee, priority)
+  - Search issues using query text
+
+- **Comment Management**
+  - Create comments on issues
+  - View comment details
+  - Update existing comments
+  - Delete comments
+
+- **Label Management**
+  - List all labels in a team
+  - Create new labels with custom names and colors
+  - Update existing labels
 
 - **Team Management**
 
@@ -20,6 +32,21 @@ A Model Context Protocol (MCP) server that provides tools for interacting with L
 - **Project Management**
   - List all projects with optional team filtering
   - View project details including name, description, state, and associated teams
+
+- **Cycle Management**
+  - List all cycles in a team
+  - Create new cycles with custom date ranges
+  - Update existing cycles
+
+- **Document Management**
+  - List all documents
+  - Create new documents with markdown content
+  - Update existing documents
+
+- **User Management**
+  - List all users in the workspace
+  - Get details about specific users
+  - Get information about the currently authenticated user
 
 ## Prerequisites
 
@@ -231,6 +258,184 @@ Gets detailed information about a specific initiative.
 }
 ```
 
+### create_comment
+
+Creates a new comment on an issue.
+
+```typescript
+{
+  issueId: string;  // Required: ID of the issue to comment on
+  body: string;     // Required: Comment content (markdown supported)
+}
+```
+
+### get_comment
+
+Gets a specific comment by ID.
+
+```typescript
+{
+  commentId: string; // Required: Comment ID
+}
+```
+
+### update_comment
+
+Updates an existing comment.
+
+```typescript
+{
+  commentId: string; // Required: Comment ID
+  body: string;      // Required: Updated comment content (markdown supported)
+}
+```
+
+### delete_comment
+
+Deletes a comment.
+
+```typescript
+{
+  commentId: string; // Required: Comment ID
+}
+```
+
+### list_labels
+
+Lists all labels in a team.
+
+```typescript
+{
+  teamId?: string;  // Optional: Team ID to list labels from
+  first?: number;   // Optional: Number of labels to return (default: 50)
+}
+```
+
+### create_label
+
+Creates a new label in a team.
+
+```typescript
+{
+  teamId: string;        // Required: Team ID where the label will be created
+  name: string;          // Required: Label name
+  color?: string;        // Optional: Label color (hex code)
+  description?: string;  // Optional: Label description
+}
+```
+
+### update_label
+
+Updates an existing label.
+
+```typescript
+{
+  labelId: string;       // Required: Label ID
+  name?: string;         // Optional: New label name
+  color?: string;        // Optional: New label color (hex code)
+  description?: string;  // Optional: New label description
+}
+```
+
+### list_cycles
+
+Lists all cycles in a team.
+
+```typescript
+{
+  teamId?: string;  // Optional: Team ID
+  first?: number;   // Optional: Number of cycles to return (default: 50)
+}
+```
+
+### create_cycle
+
+Creates a new cycle for a team.
+
+```typescript
+{
+  teamId: string;        // Required: Team ID
+  name: string;          // Required: Cycle name
+  description?: string;  // Optional: Cycle description
+  startDate: string;     // Required: Cycle start date (ISO format, e.g. 2023-04-01)
+  endDate: string;       // Required: Cycle end date (ISO format, e.g. 2023-04-15)
+}
+```
+
+### update_cycle
+
+Updates an existing cycle.
+
+```typescript
+{
+  cycleId: string;       // Required: Cycle ID
+  name?: string;         // Optional: New cycle name
+  description?: string;  // Optional: New cycle description
+  startDate?: string;    // Optional: New cycle start date (ISO format)
+  endDate?: string;      // Optional: New cycle end date (ISO format)
+}
+```
+
+### list_documents
+
+Lists all documents.
+
+```typescript
+{
+  teamId?: string;  // Optional: Team ID to filter documents
+  first?: number;   // Optional: Number of documents to return (default: 50)
+}
+```
+
+### create_document
+
+Creates a new document.
+
+```typescript
+{
+  title: string;      // Required: Document title
+  content: string;    // Required: Document content (markdown supported)
+  teamId: string;     // Required: Team ID the document belongs to
+  projectId?: string; // Optional: Project ID the document is associated with
+}
+```
+
+### update_document
+
+Updates an existing document.
+
+```typescript
+{
+  documentId: string; // Required: Document ID
+  title?: string;     // Optional: New document title
+  content?: string;   // Optional: New document content (markdown supported)
+}
+```
+
+### list_users
+
+Lists all users in the workspace.
+
+```typescript
+{
+  first?: number; // Optional: Number of users to return (default: 50)
+}
+```
+
+### get_user
+
+Gets detailed information about a specific user.
+
+```typescript
+{
+  userId: string; // Required: User ID
+}
+```
+
+### me
+
+Gets information about the authenticated user. No parameters required.
+
 ## Development
 
 For development with auto-rebuild:
@@ -352,7 +557,6 @@ The response includes pagination information:
 #### Retrieving Initiative Details
 
 You can get detailed information about a specific initiative using the `get-initiative` command:
-
 ```bash
 # Using the CLI directly
 npm run cli get-initiative INITIATIVE_ID

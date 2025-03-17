@@ -1,7 +1,7 @@
 {
   "name": "@ibraheem4/linear-mcp",
-  "version": "78.0.1",
-  "description": "A Linear MCP server for interacting with Linear's API",
+  "version": "78.1.0",
+  "description": "An enhanced Linear MCP server providing comprehensive tools for interacting with Linear's API",
   "type": "module",
   "bin": {
     "@ibraheem4/linear-mcp": "./build/index.js",
@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@linear/sdk": "37.0.0",
-    "@modelcontextprotocol/sdk": "0.6.0",
+    "@modelcontextprotocol/sdk": "1.6.1",
     "dotenv": "16.4.7"
   },
   "devDependencies": {

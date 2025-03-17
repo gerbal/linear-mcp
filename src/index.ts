@@ -53,6 +53,27 @@ const server = new Server(
         get_issue: true,
         list_initiatives: true,
         get_initiative: true,
+        // Comments
+        create_comment: true,
+        get_comment: true,
+        update_comment: true, 
+        delete_comment: true,
+        // Labels
+        list_labels: true,
+        create_label: true,
+        update_label: true,
+        // Cycles
+        list_cycles: true,
+        create_cycle: true,
+        update_cycle: true,
+        // Documents
+        list_documents: true,
+        create_document: true,
+        update_document: true,
+        // Users
+        list_users: true,
+        get_user: true,
+        me: true,
       },
     },
   }
@@ -351,6 +372,321 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["initiativeId"],
       },
     },
+    // Comment tools
+    {
+      name: "create_comment",
+      description: "Create a new comment on an issue",
+      inputSchema: {
+        type: "object",
+        properties: {
+          issueId: {
+            type: "string",
+            description: "ID of the issue to comment on",
+          },
+          body: {
+            type: "string",
+            description: "Comment content (markdown supported)",
+          },
+        },
+        required: ["issueId", "body"],
+      },
+    },
+    {
+      name: "get_comment",
+      description: "Get a specific comment by ID",
+      inputSchema: {
+        type: "object",
+        properties: {
+          commentId: {
+            type: "string",
+            description: "Comment ID",
+          },
+        },
+        required: ["commentId"],
+      },
+    },
+    {
+      name: "update_comment",
+      description: "Update an existing comment",
+      inputSchema: {
+        type: "object",
+        properties: {
+          commentId: {
+            type: "string",
+            description: "Comment ID",
+          },
+          body: {
+            type: "string",
+            description: "Updated comment content (markdown supported)",
+          },
+        },
+        required: ["commentId", "body"],
+      },
+    },
+    {
+      name: "delete_comment",
+      description: "Delete a comment",
+      inputSchema: {
+        type: "object",
+        properties: {
+          commentId: {
+            type: "string",
+            description: "Comment ID",
+          },
+        },
+        required: ["commentId"],
+      },
+    },
+    // Label tools
+    {
+      name: "list_labels",
+      description: "List all labels in a team",
+      inputSchema: {
+        type: "object",
+        properties: {
+          teamId: {
+            type: "string",
+            description: "Team ID to list labels from (optional)",
+          },
+          first: {
+            type: "number",
+            description: "Number of labels to return (default: 50)",
+          },
+        },
+      },
+    },
+    {
+      name: "create_label",
+      description: "Create a new label in a team",
+      inputSchema: {
+        type: "object",
+        properties: {
+          teamId: {
+            type: "string",
+            description: "Team ID where the label will be created",
+          },
+          name: {
+            type: "string",
+            description: "Label name",
+          },
+          color: {
+            type: "string",
+            description: "Label color (hex code, optional)",
+          },
+          description: {
+            type: "string",
+            description: "Label description (optional)",
+          },
+        },
+        required: ["teamId", "name"],
+      },
+    },
+    {
+      name: "update_label",
+      description: "Update an existing label",
+      inputSchema: {
+        type: "object",
+        properties: {
+          labelId: {
+            type: "string",
+            description: "Label ID",
+          },
+          name: {
+            type: "string",
+            description: "New label name (optional)",
+          },
+          color: {
+            type: "string",
+            description: "New label color (hex code, optional)",
+          },
+          description: {
+            type: "string",
+            description: "New label description (optional)",
+          },
+        },
+        required: ["labelId"],
+      },
+    },
+    // Cycle tools
+    {
+      name: "list_cycles",
+      description: "List all cycles in a team",
+      inputSchema: {
+        type: "object",
+        properties: {
+          teamId: {
+            type: "string",
+            description: "Team ID (optional)",
+          },
+          first: {
+            type: "number",
+            description: "Number of cycles to return (default: 50)",
+          },
+        },
+      },
+    },
+    {
+      name: "create_cycle",
+      description: "Create a new cycle for a team",
+      inputSchema: {
+        type: "object",
+        properties: {
+          teamId: {
+            type: "string",
+            description: "Team ID",
+          },
+          name: {
+            type: "string",
+            description: "Cycle name",
+          },
+          description: {
+            type: "string",
+            description: "Cycle description (optional)",
+          },
+          startDate: {
+            type: "string",
+            description: "Cycle start date (ISO format, e.g. 2023-04-01)",
+          },
+          endDate: {
+            type: "string",
+            description: "Cycle end date (ISO format, e.g. 2023-04-15)",
+          },
+        },
+        required: ["teamId", "name", "startDate", "endDate"],
+      },
+    },
+    {
+      name: "update_cycle",
+      description: "Update an existing cycle",
+      inputSchema: {
+        type: "object",
+        properties: {
+          cycleId: {
+            type: "string",
+            description: "Cycle ID",
+          },
+          name: {
+            type: "string",
+            description: "New cycle name (optional)",
+          },
+          description: {
+            type: "string",
+            description: "New cycle description (optional)",
+          },
+          startDate: {
+            type: "string",
+            description: "New cycle start date (ISO format, optional)",
+          },
+          endDate: {
+            type: "string",
+            description: "New cycle end date (ISO format, optional)",
+          },
+        },
+        required: ["cycleId"],
+      },
+    },
+    // Document tools
+    {
+      name: "list_documents",
+      description: "List all documents",
+      inputSchema: {
+        type: "object",
+        properties: {
+          teamId: {
+            type: "string",
+            description: "Team ID to filter documents (optional)",
+          },
+          first: {
+            type: "number",
+            description: "Number of documents to return (default: 50)",
+          },
+        },
+      },
+    },
+    {
+      name: "create_document",
+      description: "Create a new document",
+      inputSchema: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "Document title",
+          },
+          content: {
+            type: "string",
+            description: "Document content (markdown supported)",
+          },
+          teamId: {
+            type: "string",
+            description: "Team ID the document belongs to",
+          },
+          projectId: {
+            type: "string",
+            description: "Project ID the document is associated with (optional)",
+          },
+        },
+        required: ["title", "content", "teamId"],
+      },
+    },
+    {
+      name: "update_document",
+      description: "Update an existing document",
+      inputSchema: {
+        type: "object",
+        properties: {
+          documentId: {
+            type: "string",
+            description: "Document ID",
+          },
+          title: {
+            type: "string",
+            description: "New document title (optional)",
+          },
+          content: {
+            type: "string",
+            description: "New document content (markdown supported, optional)",
+          },
+        },
+        required: ["documentId"],
+      },
+    },
+    // User tools
+    {
+      name: "list_users",
+      description: "List all users in the workspace",
+      inputSchema: {
+        type: "object",
+        properties: {
+          first: {
+            type: "number",
+            description: "Number of users to return (default: 50)",
+          },
+        },
+      },
+    },
+    {
+      name: "get_user",
+      description: "Get detailed information about a specific user",
+      inputSchema: {
+        type: "object",
+        properties: {
+          userId: {
+            type: "string",
+            description: "User ID",
+          },
+        },
+        required: ["userId"],
+      },
+    },
+    {
+      name: "me",
+      description: "Get information about the authenticated user",
+      inputSchema: {
+        type: "object",
+        properties: {},
+      },
+    },
   ],
 }));
 
@@ -429,8 +765,102 @@ type GetInitiativeArgs = {
   initiativeId: string;
 };
 
+// Comment types
+type CreateCommentArgs = {
+  issueId: string;
+  body: string;
+};
+
+type GetCommentArgs = {
+  commentId: string;
+};
+
+type UpdateCommentArgs = {
+  commentId: string;
+  body: string;
+};
+
+type DeleteCommentArgs = {
+  commentId: string;
+};
+
+// Label types
+type ListLabelsArgs = {
+  teamId?: string;
+  first?: number;
+};
+
+type CreateLabelArgs = {
+  teamId: string;
+  name: string;
+  color?: string;
+  description?: string;
+};
+
+type UpdateLabelArgs = {
+  labelId: string;
+  name?: string;
+  color?: string;
+  description?: string;
+};
+
+// Cycle types
+type ListCyclesArgs = {
+  teamId?: string;
+  first?: number;
+};
+
+type CreateCycleArgs = {
+  teamId: string;
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+};
+
+type UpdateCycleArgs = {
+  cycleId: string;
+  name?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+// Document types
+type ListDocumentsArgs = {
+  teamId?: string;
+  first?: number;
+};
+
+type CreateDocumentArgs = {
+  title: string;
+  content: string;
+  teamId: string;
+  projectId?: string;
+};
+
+type UpdateDocumentArgs = {
+  documentId: string;
+  title?: string;
+  content?: string;
+};
+
+// User types
+type ListUsersArgs = {
+  first?: number;
+};
+
+type GetUserArgs = {
+  userId: string;
+};
+
+type MeArgs = {};
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
+    console.error(`Tool called: ${request.params.name}`);
+    console.error(`Full request:`, JSON.stringify(request));
+    
     switch (request.params.name) {
       case "create_issue": {
         const args = request.params.arguments as unknown as CreateIssueArgs;
@@ -502,7 +932,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const issue = await linearClient.issue(args.issueId);
         if (!issue) {
-          throw new Error(`Issue ${args.issueId} not found`);
+          throw new McpError(
+            ErrorCode.MethodNotFound,
+            `Issue not found: ${args.issueId}`
+          );
         }
 
         const updatedIssue = await issue.update({
@@ -525,24 +958,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "list_teams": {
-        const query = await linearClient.teams();
-        const teams = await Promise.all(
-          (query as any).nodes.map(async (team: any) => ({
-            id: team.id,
-            name: team.name,
-            key: team.key,
-            description: team.description,
-          }))
-        );
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(teams, null, 2),
-            },
-          ],
-        };
+        console.error("Handling list_teams request");
+        try {
+          console.error("Calling linearClient.teams()");
+          // Get teams using the Linear SDK
+          const teamsConnection = await linearClient.teams();
+          console.error("Teams connection:", JSON.stringify(teamsConnection));
+          
+          // Access the nodes property which contains the actual team data
+          const teams = teamsConnection.nodes;
+          console.error("Teams nodes:", JSON.stringify(teams));
+          
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(teams, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error listing teams:", error);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to list teams: ${error.message}`
+          );
+        }
       }
 
       case "list_projects": {
@@ -758,7 +1199,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const issue = await linearClient.issue(args.issueId);
         if (!issue) {
-          throw new Error(`Issue ${args.issueId} not found`);
+          throw new McpError(
+            ErrorCode.MethodNotFound,
+            `Issue not found: ${args.issueId}`
+          );
         }
 
         try {
@@ -946,7 +1390,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           };
         } catch (error: any) {
           console.error("Error processing issue details:", error);
-          throw new Error(`Failed to process issue details: ${error.message}`);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to process issue details: ${error.message}`
+          );
         }
       }
 
@@ -1049,57 +1496,574 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "get_initiative": {
         const args = request.params.arguments as unknown as GetInitiativeArgs;
-        if (!args?.initiativeId) {
-          throw new Error("Initiative ID is required");
+        const initiative = await linearClient.initiative(args.initiativeId);
+        
+        if (!initiative) {
+          throw new McpError(
+            ErrorCode.MethodNotFound,
+            `Initiative not found: ${args.initiativeId}`
+          );
         }
 
-        // Use the GraphQL client directly since the SDK doesn't expose initiatives
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(initiative, null, 2),
+            },
+          ],
+        };
+      }
+
+      // Comment tool handlers
+      case "create_comment": {
+        const args = request.params.arguments as unknown as CreateCommentArgs;
+        
+        try {
+          const issue = await linearClient.issue(args.issueId);
+          if (!issue) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Issue not found: ${args.issueId}`
+            );
+          }
+          
+          const comment = await linearClient.createComment({
+            issueId: args.issueId,
+            body: args.body,
+          });
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(comment, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to create comment: ${error.message}`
+          );
+        }
+      }
+
+      case "get_comment": {
+        const args = request.params.arguments as unknown as GetCommentArgs;
+        
+        try {
+          // Use the GraphQL client directly since the SDK doesn't expose comment by ID directly
         const query = `
-          query Initiative($id: String!) {
-            roadmap(id: $id) {
+            query Comment($id: String!) {
+              comment(id: $id) {
+                id
+                body
+                createdAt
+                updatedAt
+                user {
               id
               name
-              description
+                  email
+                }
+                issue {
+                  id
+                  title
+                  identifier
+                }
+              }
+            }
+          `;
+          
+          const variables = {
+            id: args.commentId,
+          };
+          
+          const result = await linearClient.client.rawRequest(query, variables);
+          const data = result.data as { comment: any };
+          const comment = data.comment;
+          
+          if (!comment) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Comment not found: ${args.commentId}`
+            );
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(comment, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to get comment: ${error.message}`
+          );
+        }
+      }
+
+      case "update_comment": {
+        const args = request.params.arguments as unknown as UpdateCommentArgs;
+        
+        try {
+          // Use the GraphQL client directly since the SDK doesn't expose comment by ID directly
+          const getQuery = `
+            query Comment($id: String!) {
+              comment(id: $id) {
+                id
+              }
+            }
+          `;
+          
+          const getVariables = {
+            id: args.commentId,
+          };
+          
+          const getResult = await linearClient.client.rawRequest(getQuery, getVariables);
+          const getData = getResult.data as { comment: any };
+          const comment = getData.comment;
+          
+          if (!comment) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Comment not found: ${args.commentId}`
+            );
+          }
+          
+          const updateQuery = `
+            mutation CommentUpdate($id: String!, $input: CommentUpdateInput!) {
+              commentUpdate(id: $id, input: $input) {
+                success
+                comment {
+                  id
+                  body
               createdAt
               updatedAt
-              archivedAt
-              color
-              url
-              slugId
-              sortOrder
+                }
+              }
+            }
+          `;
+          
+          const updateVariables = {
+            id: args.commentId,
+            input: {
+              body: args.body,
+            },
+          };
+          
+          const updateResult = await linearClient.client.rawRequest(updateQuery, updateVariables);
+          const updateData = updateResult.data as { commentUpdate: { success: boolean; comment: any } };
+          
+          if (!updateData.commentUpdate.success) {
+            throw new McpError(
+              ErrorCode.InternalError,
+              "Failed to update comment"
+            );
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(updateData.commentUpdate.comment, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to update comment: ${error.message}`
+          );
+        }
+      }
+
+      case "delete_comment": {
+        const args = request.params.arguments as unknown as DeleteCommentArgs;
+        
+        try {
+          // Use the GraphQL client directly since the SDK doesn't expose comment by ID directly
+          const getQuery = `
+            query Comment($id: String!) {
+              comment(id: $id) {
+                id
+              }
+            }
+          `;
+          
+          const getVariables = {
+            id: args.commentId,
+          };
+          
+          const getResult = await linearClient.client.rawRequest(getQuery, getVariables);
+          const getData = getResult.data as { comment: any };
+          const comment = getData.comment;
+          
+          if (!comment) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Comment not found: ${args.commentId}`
+            );
+          }
+          
+          const deleteQuery = `
+            mutation CommentDelete($id: String!) {
+              commentDelete(id: $id) {
+                success
+              }
+            }
+          `;
+          
+          const deleteVariables = {
+            id: args.commentId,
+          };
+          
+          const deleteResult = await linearClient.client.rawRequest(deleteQuery, deleteVariables);
+          const deleteData = deleteResult.data as { commentDelete: { success: boolean } };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ success: deleteData.commentDelete.success }, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to delete comment: ${error.message}`
+          );
+        }
+      }
+
+      // Label tool handlers
+      case "list_labels": {
+        const args = request.params.arguments as unknown as ListLabelsArgs;
+        const { teamId, first = 50 } = args;
+        
+        try {
+          let query;
+          if (teamId) {
+            const team = await linearClient.team(teamId);
+            if (!team) {
+              throw new McpError(
+                ErrorCode.MethodNotFound,
+                `Team not found: ${teamId}`
+              );
+            }
+            query = await team.labels({ first });
+          } else {
+            // If no team ID, fetch all labels
+            query = await linearClient.issueLabels({ first });
+          }
+          
+          const labels = (query as any).nodes.map((label: any) => ({
+            id: label.id,
+            name: label.name,
+            color: label.color,
+            description: label.description,
+            teamId: label.team?.id,
+            team: label.team?.name,
+          }));
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(labels, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to list labels: ${error.message}`
+          );
+        }
+      }
+
+      case "create_label": {
+        const args = request.params.arguments as unknown as CreateLabelArgs;
+        
+        try {
+          const team = await linearClient.team(args.teamId);
+          if (!team) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Team not found: ${args.teamId}`
+            );
+          }
+          
+          const label = await linearClient.createIssueLabel({
+            name: args.name,
+            teamId: args.teamId,
+            color: args.color,
+            description: args.description,
+          });
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(label, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to create label: ${error.message}`
+          );
+        }
+      }
+
+      case "update_label": {
+        const args = request.params.arguments as unknown as UpdateLabelArgs;
+        
+        try {
+          const label = await linearClient.issueLabel(args.labelId);
+          
+          if (!label) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Label not found: ${args.labelId}`
+            );
+          }
+          
+          const updateData: any = {};
+          if (args.name) updateData.name = args.name;
+          if (args.color) updateData.color = args.color;
+          if (args.description) updateData.description = args.description;
+          
+          const updatedLabel = await label.update(updateData);
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(updatedLabel, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to update label: ${error.message}`
+          );
+        }
+      }
+
+      // Cycle tool handlers
+      case "list_cycles": {
+        const args = request.params.arguments as unknown as ListCyclesArgs;
+        const { teamId, first = 50 } = args;
+        
+        try {
+          let cycles = [];
+          
+          if (teamId) {
+            const team = await linearClient.team(teamId);
+            if (!team) {
+              throw new McpError(
+                ErrorCode.MethodNotFound,
+                `Team not found: ${teamId}`
+              );
+            }
+            const query = await team.cycles({ first });
+            cycles = (query as any).nodes;
+          } else {
+            // If no team ID, fetch all cycles
+            const query = await linearClient.cycles({ first });
+            cycles = (query as any).nodes;
+          }
+          
+          const formattedCycles = cycles.map((cycle: any) => ({
+            id: cycle.id,
+            name: cycle.name,
+            description: cycle.description,
+            number: cycle.number,
+            startDate: cycle.startDate,
+            endDate: cycle.endDate,
+            completedAt: cycle.completedAt,
+            team: cycle.team ? {
+              id: cycle.team.id,
+              name: cycle.team.name,
+              key: cycle.team.key,
+            } : null,
+          }));
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(formattedCycles, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to list cycles: ${error.message}`
+          );
+        }
+      }
+
+      case "create_cycle": {
+        const args = request.params.arguments as unknown as CreateCycleArgs;
+        
+        try {
+          const team = await linearClient.team(args.teamId);
+          if (!team) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Team not found: ${args.teamId}`
+            );
+          }
+          
+          const cycle = await linearClient.createCycle({
+            teamId: args.teamId,
+            name: args.name,
+            description: args.description,
+            startsAt: new Date(args.startDate),
+            endsAt: new Date(args.endDate),
+          });
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(cycle, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to create cycle: ${error.message}`
+          );
+        }
+      }
+
+      case "update_cycle": {
+        const args = request.params.arguments as unknown as UpdateCycleArgs;
+        
+        try {
+          const cycle = await linearClient.cycle(args.cycleId);
+          
+          if (!cycle) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Cycle not found: ${args.cycleId}`
+            );
+          }
+          
+          const updateData: any = {};
+          if (args.name) updateData.name = args.name;
+          if (args.description) updateData.description = args.description;
+          if (args.startDate) updateData.startsAt = new Date(args.startDate);
+          if (args.endDate) updateData.endsAt = new Date(args.endDate);
+          
+          const updatedCycle = await cycle.update(updateData);
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(updatedCycle, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to update cycle: ${error.message}`
+          );
+        }
+      }
+
+      // Document tool handlers
+      case "list_documents": {
+        const args = request.params.arguments as unknown as ListDocumentsArgs;
+        const { teamId, first = 50 } = args;
+        
+        try {
+          let query;
+          let documents = [];
+          
+          if (teamId) {
+            // Use GraphQL directly since the SDK doesn't expose team.documents
+            const teamDocumentsQuery = `
+              query TeamDocuments($teamId: String!, $first: Int!) {
+                team(id: $teamId) {
+                  documents(first: $first) {
+                    nodes {
+                      id
+                      title
+                      url
+                      createdAt
+                      updatedAt
               creator {
                 id
                 name
-                email
               }
-              owner {
+                      team {
                 id
                 name
-                email
+                        key
               }
-              projects(first: 10) {
-                nodes {
+                      project {
                   id
                   name
-                  description
-                  state
-                  color
-                  url
-                  lead {
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            
+            const variables = {
+              teamId,
+              first,
+            };
+            
+            const result = await linearClient.client.rawRequest(teamDocumentsQuery, variables);
+            const data = result.data as { team: { documents: { nodes: any[] } } };
+            
+            if (!data.team) {
+              throw new McpError(
+                ErrorCode.MethodNotFound,
+                `Team not found: ${teamId}`
+              );
+            }
+            
+            documents = data.team.documents.nodes;
+          } else {
+            // If no team ID, fetch all documents
+            const allDocumentsQuery = `
+              query AllDocuments($first: Int!) {
+                documents(first: $first) {
+                  nodes {
+                    id
+                    title
+                    url
+                    createdAt
+                    updatedAt
+                    creator {
                     id
                     name
                   }
-                  teams(first: 5) {
-                    nodes {
+                    team {
                       id
                       name
                       key
                     }
-                  }
-                }
-                pageInfo {
-                  hasNextPage
-                  endCursor
+                    project {
+                      id
+                      name
                 }
               }
             }
@@ -1107,74 +2071,199 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         `;
         
         const variables = {
-          id: args.initiativeId,
-        };
-
-        try {
-          const result = await linearClient.client.rawRequest(query, variables);
-          // Type assertion for result.data
-          const data = result.data as { roadmap: any };
-          const initiative = data.roadmap;
-          
-          if (!initiative) {
-            throw new Error(`Initiative ${args.initiativeId} not found`);
+              first,
+            };
+            
+            const result = await linearClient.client.rawRequest(allDocumentsQuery, variables);
+            const data = result.data as { documents: { nodes: any[] } };
+            documents = data.documents.nodes;
           }
-
-          const initiativeDetails = {
-            id: initiative.id,
-            name: initiative.name,
-            description: initiative.description,
-            createdAt: initiative.createdAt,
-            updatedAt: initiative.updatedAt,
-            archivedAt: initiative.archivedAt,
-            slugId: initiative.slugId,
-            sortOrder: initiative.sortOrder,
-            color: initiative.color,
-            url: initiative.url,
-            creator: initiative.creator ? {
-              id: initiative.creator.id,
-              name: initiative.creator.name,
-              email: initiative.creator.email,
-            } : null,
-            owner: initiative.owner ? {
-              id: initiative.owner.id,
-              name: initiative.owner.name,
-              email: initiative.owner.email,
-            } : null,
-            projects: initiative.projects && initiative.projects.nodes ? 
-              initiative.projects.nodes.map((project: any) => ({
-                id: project.id,
-                name: project.name,
-                description: project.description,
-                state: project.state,
-                color: project.color,
-                url: project.url,
-                lead: project.lead ? {
-                  id: project.lead.id,
-                  name: project.lead.name
-                } : null,
-                teams: project.teams && project.teams.nodes ? 
-                  project.teams.nodes.map((team: any) => ({
-                    id: team.id,
-                    name: team.name,
-                    key: team.key
-                  })) : [],
-              })) : [],
-            hasMoreProjects: initiative.projects && initiative.projects.pageInfo ? 
-              initiative.projects.pageInfo.hasNextPage : false
-          };
 
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(initiativeDetails, null, 2),
+                text: JSON.stringify(documents, null, 2),
               },
             ],
           };
         } catch (error: any) {
-          console.error("Error processing initiative details:", error);
-          throw new Error(`Failed to process initiative details: ${error.message}`);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to list documents: ${error.message}`
+          );
+        }
+      }
+
+      case "create_document": {
+        const args = request.params.arguments as unknown as CreateDocumentArgs;
+        
+        try {
+          // Check if team exists
+          const team = await linearClient.team(args.teamId);
+          if (!team) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Team not found: ${args.teamId}`
+            );
+          }
+          
+          // Check if project exists if provided
+          if (args.projectId) {
+            const project = await linearClient.project(args.projectId);
+            if (!project) {
+              throw new McpError(
+                ErrorCode.MethodNotFound,
+                `Project not found: ${args.projectId}`
+              );
+            }
+          }
+          
+          const documentData: any = {
+            title: args.title,
+            content: args.content,
+            teamId: args.teamId,
+          };
+          
+          if (args.projectId) {
+            documentData.projectId = args.projectId;
+          }
+          
+          const document = await linearClient.createDocument(documentData);
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(document, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to create document: ${error.message}`
+          );
+        }
+      }
+
+      case "update_document": {
+        const args = request.params.arguments as unknown as UpdateDocumentArgs;
+        
+        try {
+          const document = await linearClient.document(args.documentId);
+          
+          if (!document) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Document not found: ${args.documentId}`
+            );
+          }
+          
+          const updateData: any = {};
+          if (args.title) updateData.title = args.title;
+          if (args.content) updateData.content = args.content;
+          
+          const updatedDocument = await document.update(updateData);
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(updatedDocument, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to update document: ${error.message}`
+          );
+        }
+      }
+
+      // User tool handlers
+      case "list_users": {
+        const args = request.params.arguments as unknown as ListUsersArgs;
+        const { first = 50 } = args;
+        
+        try {
+          const query = await linearClient.users({ first });
+          
+          const users = (query as any).nodes.map((user: any) => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl,
+            active: user.active,
+            admin: user.admin,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          }));
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(users, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to list users: ${error.message}`
+          );
+        }
+      }
+
+      case "get_user": {
+        const args = request.params.arguments as unknown as GetUserArgs;
+        
+        try {
+          const user = await linearClient.user(args.userId);
+          
+          if (!user) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `User not found: ${args.userId}`
+            );
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(user, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to get user: ${error.message}`
+          );
+        }
+      }
+
+      case "me": {
+        try {
+          const user = await linearClient.viewer;
+          
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(user, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to get authenticated user: ${error.message}`
+          );
         }
       }
 
