@@ -51,6 +51,8 @@ const server = new Server(
         list_projects: true,
         search_issues: true,
         get_issue: true,
+        list_initiatives: true,
+        get_initiative: true,
       },
     },
   }
@@ -215,6 +217,54 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["issueId"],
       },
     },
+    {
+      name: "list_initiatives",
+      description: "List all initiatives (roadmap items)",
+      inputSchema: {
+        type: "object",
+        properties: {
+          first: {
+            type: "number",
+            description: "Number of initiatives to return from the beginning (default: 50)",
+          },
+          last: {
+            type: "number",
+            description: "Number of initiatives to return from the end (alternative to first)",
+          },
+          after: {
+            type: "string",
+            description: "Cursor for forward pagination",
+          },
+          before: {
+            type: "string",
+            description: "Cursor for backward pagination",
+          },
+          includeArchived: {
+            type: "boolean",
+            description: "Include archived initiatives (default: false)",
+          },
+          orderBy: {
+            type: "string",
+            description: "Sort initiatives by field (createdAt, updatedAt)",
+            enum: ["createdAt", "updatedAt"],
+          },
+        },
+      },
+    },
+    {
+      name: "get_initiative",
+      description: "Get detailed information about a specific initiative",
+      inputSchema: {
+        type: "object",
+        properties: {
+          initiativeId: {
+            type: "string",
+            description: "Initiative ID",
+          },
+        },
+        required: ["initiativeId"],
+      },
+    },
   ],
 }));
 
@@ -256,6 +306,19 @@ type SearchIssuesArgs = {
 
 type GetIssueArgs = {
   issueId: string;
+};
+
+type ListInitiativesArgs = {
+  first?: number;
+  last?: number;
+  after?: string;
+  before?: string;
+  includeArchived?: boolean;
+  orderBy?: "createdAt" | "updatedAt";
+};
+
+type GetInitiativeArgs = {
+  initiativeId: string;
 };
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -376,27 +439,99 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "list_projects": {
         const args = request.params.arguments as unknown as ListProjectsArgs;
-        const filter: Record<string, any> = {};
-        if (args?.teamId) filter.team = { id: { eq: args.teamId } };
-
-        const query = await linearClient.projects({
+        
+        // Use the correct filter based on the GraphQL schema
+        let queryStr;
+        if (args?.teamId) {
+          queryStr = `
+            query Projects($first: Int, $teamId: String) {
+              projects(first: $first, filter: {teams: {some: {id: {eq: $teamId}}}}) {
+                nodes {
+                  id
+                  name
+                  description
+                  state
+                  teams {
+                    nodes {
+                      id
+                      name
+                      key
+                    }
+                  }
+                }
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+              }
+            }
+          `;
+        } else {
+          queryStr = `
+            query Projects($first: Int) {
+              projects(first: $first) {
+                nodes {
+                  id
+                  name
+                  description
+                  state
+                  teams {
+                    nodes {
+                      id
+                      name
+                      key
+                    }
+                  }
+                }
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+              }
+            }
+          `;
+        }
+        
+        const variables = {
           first: args?.first ?? 50,
-          filter,
-        });
+          ...(args?.teamId ? { teamId: args.teamId } : {})
+        };
 
-        const projects = await Promise.all(
-          (query as any).nodes.map(async (project: any) => {
-            const teamsConnection = await project.teams;
-            const teams = teamsConnection ? (teamsConnection as any).nodes : [];
-            return {
-              id: project.id,
-              name: project.name,
-              description: project.description,
-              state: project.state,
-              teamIds: teams.map((team: any) => team.id),
-            };
-          })
-        );
+        const result = await linearClient.client.rawRequest(queryStr, variables);
+        const data = result.data as { 
+          projects: { 
+            nodes: any[],
+            pageInfo: {
+              hasNextPage: boolean,
+              endCursor: string
+            } 
+          } 
+        };
+        
+        // Check if data and nodes exist to prevent "map of undefined" error
+        if (!data.projects || !data.projects.nodes) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify([], null, 2),
+              },
+            ],
+          };
+        }
+        
+        const projects = data.projects.nodes.map((project: any) => ({
+          id: project.id,
+          name: project.name,
+          description: project.description,
+          state: project.state,
+          teams: project.teams && project.teams.nodes ? 
+            project.teams.nodes.map((team: any) => ({
+              id: team.id,
+              name: team.name,
+              key: team.key
+            })) : []
+        }));
 
         return {
           content: [
@@ -641,6 +776,234 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         } catch (error: any) {
           console.error("Error processing issue details:", error);
           throw new Error(`Failed to process issue details: ${error.message}`);
+        }
+      }
+
+      case "list_initiatives": {
+        const args = request.params.arguments as unknown as ListInitiativesArgs;
+        
+        const query = `
+          query Initiatives($first: Int, $last: Int, $after: String, $before: String, $includeArchived: Boolean, $orderBy: PaginationOrderBy) {
+            roadmaps(first: $first, last: $last, after: $after, before: $before, includeArchived: $includeArchived, orderBy: $orderBy) {
+              nodes {
+                id
+                name
+                description
+                createdAt
+                updatedAt
+                archivedAt
+                color
+                url
+                creator {
+                  id
+                  name
+                }
+              }
+              pageInfo {
+                hasNextPage
+                hasPreviousPage
+                startCursor
+                endCursor
+              }
+            }
+          }
+        `;
+        
+        const variables = {
+          first: args?.first ?? (args?.last ? null : 50),
+          last: args?.last ?? null,
+          after: args?.after ?? null,
+          before: args?.before ?? null,
+          includeArchived: args.includeArchived || false,
+          orderBy: args.orderBy || "updatedAt",
+        };
+
+        const queryResult = await linearClient.client.rawRequest(query, variables);
+        // Type assertion for queryResult.data with correct shape including pageInfo
+        const data = queryResult.data as { 
+          roadmaps: { 
+            nodes: any[],
+            pageInfo: {
+              hasNextPage: boolean,
+              hasPreviousPage: boolean,
+              startCursor: string,
+              endCursor: string
+            } 
+          } 
+        };
+        
+        // Simply use the data returned by the API
+        let initiatives = data.roadmaps.nodes;
+        
+        // Note: The Linear API doesn't directly support filtering roadmaps by name or creator
+        // For transparency, we're not applying any client-side filtering
+        // If filtering is needed, it should be done by the client using the raw results
+        
+        // Map to the format we want to return
+        const formattedInitiatives = initiatives.map((initiative: any) => ({
+          id: initiative.id,
+          name: initiative.name,
+          description: initiative.description,
+          createdAt: initiative.createdAt,
+          updatedAt: initiative.updatedAt,
+          archivedAt: initiative.archivedAt,
+          color: initiative.color,
+          url: initiative.url,
+          creator: initiative.creator ? {
+            id: initiative.creator.id,
+            name: initiative.creator.name
+          } : null
+        }));
+
+        // Include pagination information
+        const responseData = {
+          initiatives: formattedInitiatives,
+          pagination: {
+            hasNextPage: data.roadmaps.pageInfo.hasNextPage,
+            hasPreviousPage: data.roadmaps.pageInfo.hasPreviousPage,
+            startCursor: data.roadmaps.pageInfo.startCursor,
+            endCursor: data.roadmaps.pageInfo.endCursor
+          }
+        };
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(responseData, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_initiative": {
+        const args = request.params.arguments as unknown as GetInitiativeArgs;
+        if (!args?.initiativeId) {
+          throw new Error("Initiative ID is required");
+        }
+
+        // Use the GraphQL client directly since the SDK doesn't expose initiatives
+        const query = `
+          query Initiative($id: String!) {
+            roadmap(id: $id) {
+              id
+              name
+              description
+              createdAt
+              updatedAt
+              archivedAt
+              color
+              url
+              slugId
+              sortOrder
+              creator {
+                id
+                name
+                email
+              }
+              owner {
+                id
+                name
+                email
+              }
+              projects(first: 10) {
+                nodes {
+                  id
+                  name
+                  description
+                  state
+                  color
+                  url
+                  lead {
+                    id
+                    name
+                  }
+                  teams(first: 5) {
+                    nodes {
+                      id
+                      name
+                      key
+                    }
+                  }
+                }
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+              }
+            }
+          }
+        `;
+        
+        const variables = {
+          id: args.initiativeId,
+        };
+
+        try {
+          const result = await linearClient.client.rawRequest(query, variables);
+          // Type assertion for result.data
+          const data = result.data as { roadmap: any };
+          const initiative = data.roadmap;
+          
+          if (!initiative) {
+            throw new Error(`Initiative ${args.initiativeId} not found`);
+          }
+
+          const initiativeDetails = {
+            id: initiative.id,
+            name: initiative.name,
+            description: initiative.description,
+            createdAt: initiative.createdAt,
+            updatedAt: initiative.updatedAt,
+            archivedAt: initiative.archivedAt,
+            slugId: initiative.slugId,
+            sortOrder: initiative.sortOrder,
+            color: initiative.color,
+            url: initiative.url,
+            creator: initiative.creator ? {
+              id: initiative.creator.id,
+              name: initiative.creator.name,
+              email: initiative.creator.email,
+            } : null,
+            owner: initiative.owner ? {
+              id: initiative.owner.id,
+              name: initiative.owner.name,
+              email: initiative.owner.email,
+            } : null,
+            projects: initiative.projects && initiative.projects.nodes ? 
+              initiative.projects.nodes.map((project: any) => ({
+                id: project.id,
+                name: project.name,
+                description: project.description,
+                state: project.state,
+                color: project.color,
+                url: project.url,
+                lead: project.lead ? {
+                  id: project.lead.id,
+                  name: project.lead.name
+                } : null,
+                teams: project.teams && project.teams.nodes ? 
+                  project.teams.nodes.map((team: any) => ({
+                    id: team.id,
+                    name: team.name,
+                    key: team.key
+                  })) : [],
+              })) : [],
+            hasMoreProjects: initiative.projects && initiative.projects.pageInfo ? 
+              initiative.projects.pageInfo.hasNextPage : false
+          };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(initiativeDetails, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error processing initiative details:", error);
+          throw new Error(`Failed to process initiative details: ${error.message}`);
         }
       }
 
