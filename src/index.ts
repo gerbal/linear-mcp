@@ -170,17 +170,103 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: "list_projects",
-      description: "List all projects",
+      description: "List all projects with optional filters",
       inputSchema: {
         type: "object",
         properties: {
-          teamId: {
-            type: "string",
-            description: "Filter by team ID (optional)",
-          },
           first: {
             type: "number",
             description: "Number of projects to return (default: 50)",
+          },
+          after: {
+            type: "string",
+            description: "Cursor for pagination - get projects after this cursor",
+          },
+          orderBy: {
+            type: "string",
+            enum: ["createdAt", "updatedAt"],
+            description: "Sort projects by field (createdAt, updatedAt)",
+          },
+          teamId: {
+            type: "string",
+            description: "Filter by team ID - shows projects accessible to the specified team",
+          },
+          id: {
+            type: "string",
+            description: "Filter by project ID",
+          },
+          name: {
+            type: "string",
+            description: "Filter projects by name (supports partial matching)",
+          },
+          state: {
+            type: "string",
+            description: "Filter by project state (backlog, planned, started, paused, completed, canceled)",
+          },
+          health: {
+            type: "string",
+            enum: ["onTrack", "atRisk", "offTrack"],
+            description: "Filter by project health status",
+          },
+          priority: {
+            type: "number",
+            description: "Filter by project priority (0-4)",
+          },
+          creatorId: {
+            type: "string",
+            description: "Filter by creator's user ID",
+          },
+          leadId: {
+            type: "string",
+            description: "Filter by project lead's user ID",
+          },
+          createdAfter: {
+            type: "string",
+            description: "Filter projects created after this date (ISO format)",
+          },
+          createdBefore: {
+            type: "string",
+            description: "Filter projects created before this date (ISO format)",
+          },
+          updatedAfter: {
+            type: "string",
+            description: "Filter projects updated after this date (ISO format)",
+          },
+          updatedBefore: {
+            type: "string",
+            description: "Filter projects updated before this date (ISO format)",
+          },
+          startDate: {
+            type: "string",
+            description: "Filter by project start date (ISO format)",
+          },
+          targetDate: {
+            type: "string",
+            description: "Filter by project target date (ISO format)",
+          },
+          completedAfter: {
+            type: "string",
+            description: "Filter projects completed after this date (ISO format)",
+          },
+          completedBefore: {
+            type: "string",
+            description: "Filter projects completed before this date (ISO format)",
+          },
+          canceledAfter: {
+            type: "string",
+            description: "Filter projects canceled after this date (ISO format)",
+          },
+          canceledBefore: {
+            type: "string",
+            description: "Filter projects canceled before this date (ISO format)",
+          },
+          hasBlocking: {
+            type: "boolean",
+            description: "Filter projects that are blocking other projects",
+          },
+          hasBlocked: {
+            type: "boolean",
+            description: "Filter projects that are blocked by other projects",
           },
         },
       },
@@ -294,9 +380,31 @@ type UpdateIssueArgs = {
   labels?: string[];
 };
 
+// Update with all the fields defined in the input schema:
 type ListProjectsArgs = {
-  teamId?: string;
   first?: number;
+  after?: string;
+  orderBy?: "createdAt" | "updatedAt";
+  teamId?: string;
+  id?: string;
+  name?: string;
+  state?: string;
+  health?: "onTrack" | "atRisk" | "offTrack";
+  priority?: number;
+  creatorId?: string;
+  leadId?: string;
+  createdAfter?: string;
+  createdBefore?: string;
+  updatedAfter?: string;
+  updatedBefore?: string;
+  startDate?: string;
+  targetDate?: string;
+  completedAfter?: string;
+  completedBefore?: string;
+  canceledAfter?: string;
+  canceledBefore?: string;
+  hasBlocking?: boolean;
+  hasBlocked?: boolean;
 };
 
 type SearchIssuesArgs = {
@@ -440,75 +548,120 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "list_projects": {
         const args = request.params.arguments as unknown as ListProjectsArgs;
         
-        // Use the correct filter based on the GraphQL schema
-        let queryStr;
-        if (args?.teamId) {
-          queryStr = `
-            query Projects($first: Int, $teamId: String) {
-              projects(first: $first, filter: {teams: {some: {id: {eq: $teamId}}}}) {
-                nodes {
-                  id
-                  name
-                  description
-                  state
-                  teams {
-                    nodes {
-                      id
-                      name
-                      key
-                    }
-                  }
-                }
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-              }
-            }
-          `;
-        } else {
-          queryStr = `
-            query Projects($first: Int) {
-              projects(first: $first) {
-                nodes {
-                  id
-                  name
-                  description
-                  state
-                  teams {
-                    nodes {
-                      id
-                      name
-                      key
-                    }
-                  }
-                }
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-              }
-            }
-          `;
+        const { first = 50, after, orderBy, teamId, id, name, state, createdAfter, createdBefore, 
+          updatedAfter, updatedBefore, startDate, targetDate, completedAfter, completedBefore, 
+          canceledAfter, canceledBefore, health, priority, creatorId, leadId, hasBlocking, hasBlocked } = args;
+        
+        // Build the filter object based on provided arguments
+        let filter: any = {};
+        
+        if (id) filter.id = { eq: id };
+        if (name) filter.name = { contains: name };
+        if (state) filter.state = { eq: state };
+        if (teamId) filter.accessibleTeams = { some: { id: { eq: teamId } } };
+        if (health) filter.health = { eq: health };
+        if (priority !== undefined) filter.priority = { eq: priority };
+        
+        if (creatorId) filter.creator = { id: { eq: creatorId } };
+        if (leadId) filter.lead = { id: { eq: leadId } };
+        
+        // Date filters
+        if (createdAfter || createdBefore) {
+          filter.createdAt = {};
+          if (createdAfter) filter.createdAt.gte = createdAfter;
+          if (createdBefore) filter.createdAt.lte = createdBefore;
         }
         
-        const variables = {
-          first: args?.first ?? 50,
-          ...(args?.teamId ? { teamId: args.teamId } : {})
+        if (updatedAfter || updatedBefore) {
+          filter.updatedAt = {};
+          if (updatedAfter) filter.updatedAt.gte = updatedAfter;
+          if (updatedBefore) filter.updatedAt.lte = updatedBefore;
+        }
+        
+        if (startDate) filter.startDate = { eq: startDate };
+        if (targetDate) filter.targetDate = { eq: targetDate };
+        
+        if (completedAfter || completedBefore) {
+          filter.completedAt = {};
+          if (completedAfter) filter.completedAt.gte = completedAfter;
+          if (completedBefore) filter.completedAt.lte = completedBefore;
+        }
+        
+        if (canceledAfter || canceledBefore) {
+          filter.canceledAt = {};
+          if (canceledAfter) filter.canceledAt.gte = canceledAfter;
+          if (canceledBefore) filter.canceledAt.lte = canceledBefore;
+        }
+        
+        if (hasBlocking) filter.hasBlockingRelations = { exists: hasBlocking };
+        if (hasBlocked) filter.hasBlockedByRelations = { exists: hasBlocked };
+        
+        // Variables for the GraphQL query
+        const variables: any = {
+          first,
+          filter
         };
+        
+        if (after) variables.after = after;
+        if (orderBy) variables.orderBy = orderBy;
 
-        const result = await linearClient.client.rawRequest(queryStr, variables);
+        const query = `
+          query Projects($first: Int, $after: String, $orderBy: PaginationOrderBy, $filter: ProjectFilter) {
+            projects(first: $first, after: $after, orderBy: $orderBy, filter: $filter) {
+              nodes {
+                id
+                name
+                description
+                state
+                createdAt
+                updatedAt
+                completedAt
+                canceledAt
+                startDate
+                targetDate
+                health
+                priority
+                creator {
+                  id
+                  name
+                  email
+                }
+                lead {
+                  id
+                  name
+                  email
+                }
+                teams {
+                  nodes {
+                    id
+                    name
+                    key
+                  }
+                }
+              }
+              pageInfo {
+                hasNextPage
+                hasPreviousPage
+                startCursor
+                endCursor
+              }
+            }
+          }
+        `;
+
+        const result = await linearClient.client.rawRequest(query, variables);
         const data = result.data as { 
           projects: { 
             nodes: any[],
             pageInfo: {
               hasNextPage: boolean,
+              hasPreviousPage: boolean,
+              startCursor: string,
               endCursor: string
             } 
           } 
         };
         
-        // Check if data and nodes exist to prevent "map of undefined" error
         if (!data.projects || !data.projects.nodes) {
           return {
             content: [
@@ -525,6 +678,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           name: project.name,
           description: project.description,
           state: project.state,
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt,
+          completedAt: project.completedAt || null,
+          canceledAt: project.canceledAt || null,
+          startDate: project.startDate || null,
+          targetDate: project.targetDate || null,
+          health: project.health || null,
+          priority: project.priority !== undefined ? project.priority : null,
+          creator: project.creator ? {
+            id: project.creator.id,
+            name: project.creator.name,
+            email: project.creator.email
+          } : null,
+          lead: project.lead ? {
+            id: project.lead.id,
+            name: project.lead.name,
+            email: project.lead.email
+          } : null,
           teams: project.teams && project.teams.nodes ? 
             project.teams.nodes.map((team: any) => ({
               id: team.id,
