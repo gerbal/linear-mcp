@@ -5,15 +5,21 @@
   "type": "module",
   "bin": {
     "@ibraheem4/linear-mcp": "./build/index.js",
-    "linear-mcp": "./build/index.js"
+    "linear-mcp": "./build/index.js",
+    "linear-mcp-cli": "./build/cli.js"
   },
   "files": [
     "build"
   ],
   "scripts": {
-    "build": "tsc && chmod +x build/index.js",
+    "build": "tsc && chmod +x build/index.js && chmod +x build/cli.js",
+    "start": "npm run build && node build/index.js",
+    "dev": "npm run build && node build/index.js",
+    "cli": "npm run build && node build/cli.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "npm run build",
     "watch": "tsc --watch",
+    "pack": "npm pack",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
     "publish:patch": "npm version patch && npm publish",
     "publish:minor": "npm version minor && npm publish",
