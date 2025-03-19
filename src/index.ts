@@ -138,6 +138,159 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             type: "string",
             description: "Filter by status (optional)",
           },
+          projectId: {
+            type: "string",
+            description: "Filter by project ID (optional)",
+          },
+          creatorId: {
+            type: "string",
+            description: "Filter by creator ID (optional)",
+          },
+          priority: {
+            type: "number",
+            description: "Filter by priority (0-4, optional)",
+            minimum: 0,
+            maximum: 4,
+          },
+          dueDate: {
+            type: "string",
+            description: "Filter by exact due date (ISO format, optional)",
+          },
+          dueDateGte: {
+            type: "string",
+            description: "Filter by due date greater than or equal (ISO format, optional)",
+          },
+          dueDateLte: {
+            type: "string",
+            description: "Filter by due date less than or equal (ISO format, optional)",
+          },
+          createdAtGte: {
+            type: "string",
+            description: "Filter by created date greater than or equal (ISO format, optional)",
+          },
+          createdAtLte: {
+            type: "string",
+            description: "Filter by created date less than or equal (ISO format, optional)",
+          },
+          updatedAtGte: {
+            type: "string",
+            description: "Filter by updated date greater than or equal (ISO format, optional)",
+          },
+          updatedAtLte: {
+            type: "string",
+            description: "Filter by updated date less than or equal (ISO format, optional)",
+          },
+          completedAtGte: {
+            type: "string",
+            description: "Filter by completed date greater than or equal (ISO format, optional)",
+          },
+          completedAtLte: {
+            type: "string",
+            description: "Filter by completed date less than or equal (ISO format, optional)",
+          },
+          canceledAtGte: {
+            type: "string",
+            description: "Filter by canceled date greater than or equal (ISO format, optional)",
+          },
+          canceledAtLte: {
+            type: "string",
+            description: "Filter by canceled date less than or equal (ISO format, optional)",
+          },
+          startedAtGte: {
+            type: "string",
+            description: "Filter by started date greater than or equal (ISO format, optional)",
+          },
+          startedAtLte: {
+            type: "string",
+            description: "Filter by started date less than or equal (ISO format, optional)",
+          },
+          archivedAtGte: {
+            type: "string",
+            description: "Filter by archived date greater than or equal (ISO format, optional)",
+          },
+          archivedAtLte: {
+            type: "string",
+            description: "Filter by archived date less than or equal (ISO format, optional)",
+          },
+          title: {
+            type: "string",
+            description: "Filter by exact title match (optional)",
+          },
+          titleContains: {
+            type: "string",
+            description: "Filter by title containing text (optional)",
+          },
+          description: {
+            type: "string",
+            description: "Filter by exact description match (optional)",
+          },
+          descriptionContains: {
+            type: "string",
+            description: "Filter by description containing text (optional)",
+          },
+          number: {
+            type: "number",
+            description: "Filter by issue number (optional)",
+          },
+          labelIds: {
+            type: "array",
+            items: {
+              type: "string"
+            },
+            description: "Filter by label IDs (optional)",
+          },
+          cycleId: {
+            type: "string",
+            description: "Filter by cycle ID (optional)",
+          },
+          parentId: {
+            type: "string",
+            description: "Filter by parent issue ID (optional)",
+          },
+          estimate: {
+            type: "number",
+            description: "Filter by exact estimate value (optional)",
+          },
+          estimateGte: {
+            type: "number",
+            description: "Filter by estimate greater than or equal (optional)",
+          },
+          estimateLte: {
+            type: "number",
+            description: "Filter by estimate less than or equal (optional)",
+          },
+          isBlocked: {
+            type: "boolean",
+            description: "Filter issues that are blocked (optional)",
+          },
+          isBlocking: {
+            type: "boolean",
+            description: "Filter issues that are blocking other issues (optional)",
+          },
+          isDuplicate: {
+            type: "boolean",
+            description: "Filter issues that are duplicates (optional)",
+          },
+          hasRelations: {
+            type: "boolean",
+            description: "Filter issues that have relations (optional)",
+          },
+          subscriberIds: {
+            type: "array",
+            items: {
+              type: "string"
+            },
+            description: "Filter by subscriber user IDs (optional)",
+          },
+          includeArchived: {
+            type: "boolean", 
+            description: "Include archived issues (default: false)",
+          },
+          orderBy: {
+            type: "string",
+            enum: ["createdAt", "updatedAt", "priority"],
+            description: "Sort issues by field (optional)",
+          },
           first: {
             type: "number",
             description: "Number of issues to return (default: 50)",
@@ -704,6 +857,42 @@ type ListIssuesArgs = {
   assigneeId?: string;
   status?: string;
   first?: number;
+  projectId?: string;
+  creatorId?: string;
+  priority?: number;
+  dueDate?: string;
+  dueDateGte?: string;
+  dueDateLte?: string;
+  createdAtGte?: string;
+  createdAtLte?: string;
+  updatedAtGte?: string;
+  updatedAtLte?: string;
+  completedAtGte?: string;
+  completedAtLte?: string;
+  canceledAtGte?: string;
+  canceledAtLte?: string;
+  startedAtGte?: string;
+  startedAtLte?: string;
+  archivedAtGte?: string;
+  archivedAtLte?: string;
+  title?: string;
+  titleContains?: string;
+  description?: string;
+  descriptionContains?: string;
+  number?: number;
+  labelIds?: string[];
+  cycleId?: string;
+  parentId?: string;
+  estimate?: number;
+  estimateGte?: number;
+  estimateLte?: number;
+  isBlocked?: boolean;
+  isBlocking?: boolean;
+  isDuplicate?: boolean;
+  hasRelations?: boolean;
+  subscriberIds?: string[];
+  includeArchived?: boolean;
+  orderBy?: "createdAt" | "updatedAt" | "priority";
 };
 
 type UpdateIssueArgs = {
@@ -890,26 +1079,261 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "list_issues": {
         const args = request.params.arguments as unknown as ListIssuesArgs;
         const filter: Record<string, any> = {};
+        
+        // Team filter
         if (args?.teamId) filter.team = { id: { eq: args.teamId } };
+        
+        // Assignee filter
         if (args?.assigneeId) filter.assignee = { id: { eq: args.assigneeId } };
+        
+        // Status filter (using state name)
         if (args?.status) filter.state = { name: { eq: args.status } };
+        
+        // Project filter
+        if (args?.projectId) filter.project = { id: { eq: args.projectId } };
+        
+        // Creator filter
+        if (args?.creatorId) filter.creator = { id: { eq: args.creatorId } };
+        
+        // Priority filter
+        if (args?.priority !== undefined) filter.priority = { eq: args.priority };
+        
+        // Due date filters
+        if (args?.dueDate || args?.dueDateGte || args?.dueDateLte) {
+          filter.dueDate = {};
+          if (args.dueDate) filter.dueDate.eq = args.dueDate;
+          if (args.dueDateGte) filter.dueDate.gte = args.dueDateGte;
+          if (args.dueDateLte) filter.dueDate.lte = args.dueDateLte;
+        }
+        
+        // Created at filters
+        if (args?.createdAtGte || args?.createdAtLte) {
+          filter.createdAt = {};
+          if (args.createdAtGte) filter.createdAt.gte = args.createdAtGte;
+          if (args.createdAtLte) filter.createdAt.lte = args.createdAtLte;
+        }
+        
+        // Updated at filters
+        if (args?.updatedAtGte || args?.updatedAtLte) {
+          filter.updatedAt = {};
+          if (args.updatedAtGte) filter.updatedAt.gte = args.updatedAtGte;
+          if (args.updatedAtLte) filter.updatedAt.lte = args.updatedAtLte;
+        }
+        
+        // Completed at filters
+        if (args?.completedAtGte || args?.completedAtLte) {
+          filter.completedAt = {};
+          if (args.completedAtGte) filter.completedAt.gte = args.completedAtGte;
+          if (args.completedAtLte) filter.completedAt.lte = args.completedAtLte;
+        }
+        
+        // Canceled at filters
+        if (args?.canceledAtGte || args?.canceledAtLte) {
+          filter.canceledAt = {};
+          if (args.canceledAtGte) filter.canceledAt.gte = args.canceledAtGte;
+          if (args.canceledAtLte) filter.canceledAt.lte = args.canceledAtLte;
+        }
+        
+        // Started at filters
+        if (args?.startedAtGte || args?.startedAtLte) {
+          filter.startedAt = {};
+          if (args.startedAtGte) filter.startedAt.gte = args.startedAtGte;
+          if (args.startedAtLte) filter.startedAt.lte = args.startedAtLte;
+        }
+        
+        // Archived at filters
+        if (args?.archivedAtGte || args?.archivedAtLte) {
+          filter.archivedAt = {};
+          if (args.archivedAtGte) filter.archivedAt.gte = args.archivedAtGte;
+          if (args.archivedAtLte) filter.archivedAt.lte = args.archivedAtLte;
+        }
+        
+        // Title filters
+        if (args?.title || args?.titleContains) {
+          filter.title = {};
+          if (args.title) filter.title.eq = args.title;
+          if (args.titleContains) filter.title.contains = args.titleContains;
+        }
+        
+        // Description filters
+        if (args?.description || args?.descriptionContains) {
+          filter.description = {};
+          if (args.description) filter.description.eq = args.description;
+          if (args.descriptionContains) filter.description.contains = args.descriptionContains;
+        }
+        
+        // Number filter
+        if (args?.number) filter.number = { eq: args.number };
+        
+        // Label filters
+        if (args?.labelIds?.length) {
+          filter.labels = { some: { id: { in: args.labelIds } } };
+        }
+        
+        // Cycle filter
+        if (args?.cycleId) filter.cycle = { id: { eq: args.cycleId } };
+        
+        // Parent filter
+        if (args?.parentId) filter.parent = { id: { eq: args.parentId } };
+        
+        // Estimate filters
+        if (args?.estimate !== undefined || args?.estimateGte !== undefined || args?.estimateLte !== undefined) {
+          filter.estimate = {};
+          if (args.estimate !== undefined) filter.estimate.eq = args.estimate;
+          if (args.estimateGte !== undefined) filter.estimate.gte = args.estimateGte;
+          if (args.estimateLte !== undefined) filter.estimate.lte = args.estimateLte;
+        }
+        
+        // Relationship filters
+        if (args?.isBlocked) filter.hasBlockedByRelations = { exists: true };
+        if (args?.isBlocking) filter.hasBlockingRelations = { exists: true };
+        if (args?.isDuplicate) filter.hasDuplicateRelations = { exists: true };
+        if (args?.hasRelations) filter.hasRelatedRelations = { exists: true };
+        
+        // Subscriber filters
+        if (args?.subscriberIds?.length) {
+          filter.subscribers = { some: { id: { in: args.subscriberIds } } };
+        }
 
-        const issues = await linearClient.issues({
+        // Prepare query options
+        const queryOptions: any = {
           first: args?.first ?? 50,
           filter,
-        });
+          includeArchived: args?.includeArchived || false
+        };
+        
+        // Add orderBy if specified
+        if (args?.orderBy) {
+          queryOptions.orderBy = args.orderBy;
+        }
+
+        const issues = await linearClient.issues(queryOptions);
 
         const formattedIssues = await Promise.all(
           issues.nodes.map(async (issue) => {
-            const state = await issue.state;
-            const assignee = await issue.assignee;
+            // Fetch related data in parallel for performance
+            const [
+              state,
+              assignee,
+              project,
+              team,
+              creator,
+              cycle,
+              parent,
+              labels
+            ] = await Promise.all([
+              issue.state,
+              issue.assignee,
+              issue.project,
+              issue.team,
+              issue.creator,
+              issue.cycle,
+              issue.parent,
+              issue.labels()
+            ]);
+            
+            // Process labels
+            const labelsList = labels ? 
+              labels.nodes.map((label: any) => ({
+                id: label.id,
+                name: label.name,
+                color: label.color
+              })) : [];
+              
             return {
               id: issue.id,
+              identifier: issue.identifier,
+              number: issue.number,
               title: issue.title,
-              status: state ? await state.name : "Unknown",
-              assignee: assignee ? assignee.name : "Unassigned",
+              description: issue.description,
+              
+              // Status
+              status: state ? {
+                id: state.id,
+                name: state.name,
+                type: state.type,
+                color: state.color
+              } : null,
+              
+              // Relationships
+              assignee: assignee ? {
+                id: assignee.id,
+                name: assignee.name,
+                email: assignee.email
+              } : null,
+              
+              creator: creator ? {
+                id: creator.id,
+                name: creator.name,
+                email: creator.email
+              } : null,
+              
+              project: project ? { 
+                id: project.id, 
+                name: project.name,
+                state: project.state 
+              } : null,
+              
+              team: team ? { 
+                id: team.id, 
+                name: team.name, 
+                key: team.key 
+              } : null,
+              
+              cycle: cycle ? {
+                id: cycle.id,
+                name: cycle.name,
+                number: cycle.number
+              } : null,
+              
+              parent: parent ? {
+                id: parent.id,
+                title: parent.title,
+                identifier: parent.identifier
+              } : null,
+              
+              // Properties
               priority: issue.priority,
+              priorityLabel: issue.priorityLabel,
+              estimate: issue.estimate,
+              sortOrder: issue.sortOrder,
+              boardOrder: issue.boardOrder,
+              subIssueSortOrder: issue.subIssueSortOrder,
+              
+              // URLs and external identifiers
               url: issue.url,
+              branchName: issue.branchName,
+              
+              // Dates
+              dueDate: issue.dueDate,
+              createdAt: issue.createdAt,
+              updatedAt: issue.updatedAt,
+              startedAt: issue.startedAt,
+              completedAt: issue.completedAt,
+              canceledAt: issue.canceledAt,
+              archivedAt: issue.archivedAt,
+              autoArchivedAt: issue.autoArchivedAt,
+              autoClosedAt: issue.autoClosedAt,
+              triagedAt: issue.triagedAt,
+              addedToCycleAt: issue.addedToCycleAt,
+              addedToProjectAt: issue.addedToProjectAt,
+              
+              // SLA information
+              slaStartedAt: issue.slaStartedAt,
+              slaBreachesAt: issue.slaBreachesAt,
+              slaMediumRiskAt: issue.slaMediumRiskAt,
+              slaHighRiskAt: issue.slaHighRiskAt,
+              slaType: issue.slaType,
+              
+              // Collections
+              labels: labelsList,
+              
+              // Additional metadata
+              customerTicketCount: issue.customerTicketCount,
+              previousIdentifiers: issue.previousIdentifiers,
+              snoozedUntilAt: issue.snoozedUntilAt,
+              trashed: issue.trashed,
+              reactionData: issue.reactionData
             };
           })
         );
@@ -2067,7 +2491,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 }
               }
             }
-          }
         `;
         
         const variables = {
