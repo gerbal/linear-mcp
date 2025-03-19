@@ -51,7 +51,7 @@ const server = new Server(
         list_projects: true,
         search_issues: true,
         get_issue: true,
-        list_initiatives: true,
+        list_roadmaps: true,
         get_initiative: true,
         // Comments
         create_comment: true,
@@ -478,18 +478,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
-      name: "list_initiatives",
-      description: "List all initiatives (roadmap items)",
+      name: "list_roadmaps",
+      description: "List all roadmaps (previously called initiatives)",
       inputSchema: {
         type: "object",
         properties: {
           first: {
             type: "number",
-            description: "Number of initiatives to return from the beginning (default: 50)",
+            description: "Number of roadmaps to return from the beginning (default: 50)",
           },
           last: {
             type: "number",
-            description: "Number of initiatives to return from the end (alternative to first)",
+            description: "Number of roadmaps to return from the end (alternative to first)",
           },
           after: {
             type: "string",
@@ -501,12 +501,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           includeArchived: {
             type: "boolean",
-            description: "Include archived initiatives (default: false)",
+            description: "Include archived roadmaps (default: false)",
           },
           orderBy: {
             type: "string",
-            description: "Sort initiatives by field (createdAt, updatedAt)",
+            description: "Sort roadmaps by field (createdAt, updatedAt)",
             enum: ["createdAt", "updatedAt"],
+          },
+          includeProjects: {
+            type: "boolean",
+            description: "Include project IDs in the response (default: false)",
           },
         },
       },
@@ -941,13 +945,14 @@ type GetIssueArgs = {
   issueId: string;
 };
 
-type ListInitiativesArgs = {
+type ListRoadmapsArgs = {
   first?: number;
   last?: number;
   after?: string;
   before?: string;
   includeArchived?: boolean;
-  orderBy?: "createdAt" | "updatedAt";
+  orderBy?: 'createdAt' | 'updatedAt';
+  includeProjects?: boolean;
 };
 
 type GetInitiativeArgs = {
@@ -1785,101 +1790,108 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       }
 
-      case "list_initiatives": {
-        const args = request.params.arguments as unknown as ListInitiativesArgs;
+      case "list_roadmaps": {
+        const args = request.params.arguments as unknown as ListRoadmapsArgs;
         
-        const query = `
-          query Initiatives($first: Int, $last: Int, $after: String, $before: String, $includeArchived: Boolean, $orderBy: PaginationOrderBy) {
-            roadmaps(first: $first, last: $last, after: $after, before: $before, includeArchived: $includeArchived, orderBy: $orderBy) {
-              nodes {
-                id
-                name
-                description
-                createdAt
-                updatedAt
-                archivedAt
-                color
-                url
-                creator {
-                  id
-                  name
+        try {
+          // Use the SDK's roadmaps method
+          const roadmapsConnection = await linearClient.roadmaps({
+            first: args?.first ?? (args?.last ? undefined : 50),
+            last: args?.last,
+            after: args?.after,
+            before: args?.before,
+            includeArchived: args?.includeArchived,
+            orderBy: args?.orderBy as any
+          });
+          
+          // Process the roadmaps data
+          const roadmaps = await Promise.all(
+            roadmapsConnection.nodes.map(async (roadmap) => {
+              // Fetch creator data if available
+              const creator = await roadmap.creator;
+              
+              // Base roadmap object without projects
+              const roadmapObj = {
+                id: roadmap.id,
+                name: roadmap.name,
+                description: roadmap.description,
+                createdAt: roadmap.createdAt,
+                updatedAt: roadmap.updatedAt,
+                archivedAt: roadmap.archivedAt,
+                color: roadmap.color,
+                url: roadmap.url,
+                creator: creator ? {
+                  id: creator.id,
+                  name: creator.name
+                } : null
+              };
+              
+              // Only fetch projects if explicitly requested to avoid rate limiting
+              if (args?.includeProjects) {
+                try {
+                  const projectsConnection = await roadmap.projects({
+                    first: 50,
+                    includeArchived: args?.includeArchived
+                  });
+                  
+                  return {
+                    ...roadmapObj,
+                    projectIds: projectsConnection.nodes.map(project => project.id)
+                  };
+                } catch (projectError: any) {
+                  // If we hit rate limits when fetching projects, return roadmap without projects
+                  if (projectError.message && projectError.message.includes('Rate limit exceeded')) {
+                    console.error(`Rate limit hit while fetching projects for roadmap ${roadmap.id}`);
+                    return {
+                      ...roadmapObj,
+                      projectIds: [],
+                      projectsError: "Projects not loaded due to rate limiting"
+                    };
+                  }
+                  throw projectError;
                 }
               }
-              pageInfo {
-                hasNextPage
-                hasPreviousPage
-                startCursor
-                endCursor
-              }
+              
+              // Return roadmap without projects if not requested
+              return roadmapObj;
+            })
+          );
+
+          // Include pagination information
+          const responseData = {
+            roadmaps,
+            pagination: {
+              hasNextPage: roadmapsConnection.pageInfo.hasNextPage,
+              hasPreviousPage: roadmapsConnection.pageInfo.hasPreviousPage,
+              startCursor: roadmapsConnection.pageInfo.startCursor,
+              endCursor: roadmapsConnection.pageInfo.endCursor
             }
+          };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(responseData, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error listing roadmaps:", error);
+          
+          // Special handling for rate limit errors
+          if (error.message && error.message.includes('Rate limit exceeded')) {
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Linear API rate limit exceeded. Try again later or use smaller page sizes. For more information see: https://developers.linear.app/docs/graphql/working-with-the-graphql-api/rate-limiting`
+            );
           }
-        `;
-        
-        const variables = {
-          first: args?.first ?? (args?.last ? null : 50),
-          last: args?.last ?? null,
-          after: args?.after ?? null,
-          before: args?.before ?? null,
-          includeArchived: args.includeArchived || false,
-          orderBy: args.orderBy || "updatedAt",
-        };
-
-        const queryResult = await linearClient.client.rawRequest(query, variables);
-        // Type assertion for queryResult.data with correct shape including pageInfo
-        const data = queryResult.data as { 
-          roadmaps: { 
-            nodes: any[],
-            pageInfo: {
-              hasNextPage: boolean,
-              hasPreviousPage: boolean,
-              startCursor: string,
-              endCursor: string
-            } 
-          } 
-        };
-        
-        // Simply use the data returned by the API
-        let initiatives = data.roadmaps.nodes;
-        
-        // Note: The Linear API doesn't directly support filtering roadmaps by name or creator
-        // For transparency, we're not applying any client-side filtering
-        // If filtering is needed, it should be done by the client using the raw results
-        
-        // Map to the format we want to return
-        const formattedInitiatives = initiatives.map((initiative: any) => ({
-          id: initiative.id,
-          name: initiative.name,
-          description: initiative.description,
-          createdAt: initiative.createdAt,
-          updatedAt: initiative.updatedAt,
-          archivedAt: initiative.archivedAt,
-          color: initiative.color,
-          url: initiative.url,
-          creator: initiative.creator ? {
-            id: initiative.creator.id,
-            name: initiative.creator.name
-          } : null
-        }));
-
-        // Include pagination information
-        const responseData = {
-          initiatives: formattedInitiatives,
-          pagination: {
-            hasNextPage: data.roadmaps.pageInfo.hasNextPage,
-            hasPreviousPage: data.roadmaps.pageInfo.hasPreviousPage,
-            startCursor: data.roadmaps.pageInfo.startCursor,
-            endCursor: data.roadmaps.pageInfo.endCursor
-          }
-        };
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(responseData, null, 2),
-            },
-          ],
-        };
+          
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to list roadmaps: ${error.message}`
+          );
+        }
       }
 
       case "get_initiative": {
@@ -2406,7 +2418,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                       project {
                   id
                   name
-                      }
+              }
                     }
                   }
                 }
