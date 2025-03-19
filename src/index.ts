@@ -1418,7 +1418,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           canceledAfter, canceledBefore, health, priority, creatorId, leadId, hasBlocking, hasBlocked } = args;
         
         // Build the filter object based on provided arguments
-        let filter: any = {};
+        const filter: any = {};
         
         if (id) filter.id = { eq: id };
         if (name) filter.name = { contains: name };
@@ -1461,122 +1461,86 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (hasBlocking) filter.hasBlockingRelations = { exists: hasBlocking };
         if (hasBlocked) filter.hasBlockedByRelations = { exists: hasBlocked };
         
-        // Variables for the GraphQL query
-        const variables: any = {
+        // Prepare query options
+        const queryVariables: any = {
           first,
           filter
         };
         
-        if (after) variables.after = after;
-        if (orderBy) variables.orderBy = orderBy;
+        if (after) queryVariables.after = after;
+        if (orderBy) queryVariables.orderBy = orderBy;
 
-        const query = `
-          query Projects($first: Int, $after: String, $orderBy: PaginationOrderBy, $filter: ProjectFilter) {
-            projects(first: $first, after: $after, orderBy: $orderBy, filter: $filter) {
-              nodes {
-                id
-                name
-                description
-                state
-                createdAt
-                updatedAt
-                completedAt
-                canceledAt
-                startDate
-                targetDate
-                health
-                priority
-                creator {
-                  id
-                  name
-                  email
-                }
-                lead {
-                  id
-                  name
-                  email
-                }
-                teams {
-                  nodes {
-                    id
-                    name
-                    key
-                  }
-                }
-              }
-              pageInfo {
-                hasNextPage
-                hasPreviousPage
-                startCursor
-                endCursor
-              }
-            }
-          }
-        `;
+        try {
+          // Use the SDK's projects method instead of raw GraphQL
+          const projectsConnection = await linearClient.projects(queryVariables);
+          
+          // Process the projects data
+          const projects = await Promise.all(
+            projectsConnection.nodes.map(async (project) => {
+              // Fetch related data for each project
+              const [creator, lead, teams] = await Promise.all([
+                project.creator,
+                project.lead,
+                project.teams ? project.teams() : { nodes: [] }
+              ]);
+              
+              return {
+                id: project.id,
+                name: project.name,
+                description: project.description,
+                state: project.state,
+                createdAt: project.createdAt,
+                updatedAt: project.updatedAt,
+                completedAt: project.completedAt || null,
+                canceledAt: project.canceledAt || null,
+                startDate: project.startDate || null,
+                targetDate: project.targetDate || null,
+                health: project.health || null,
+                priority: project.priority !== undefined ? project.priority : null,
+                creator: creator ? {
+                  id: creator.id,
+                  name: creator.name,
+                  email: creator.email
+                } : null,
+                lead: lead ? {
+                  id: lead.id,
+                  name: lead.name,
+                  email: lead.email
+                } : null,
+                teams: teams && teams.nodes ? 
+                  teams.nodes.map((team: any) => ({
+                    id: team.id,
+                    name: team.name,
+                    key: team.key
+                  })) : []
+              };
+            })
+          );
 
-        const result = await linearClient.client.rawRequest(query, variables);
-        const data = result.data as { 
-          projects: { 
-            nodes: any[],
+          // Include pagination information
+          const responseData = {
+            projects,
             pageInfo: {
-              hasNextPage: boolean,
-              hasPreviousPage: boolean,
-              startCursor: string,
-              endCursor: string
-            } 
-          } 
-        };
-        
-        if (!data.projects || !data.projects.nodes) {
+              hasNextPage: projectsConnection.pageInfo.hasNextPage,
+              endCursor: projectsConnection.pageInfo.endCursor
+            }
+          };
+
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify([], null, 2),
+                text: JSON.stringify(responseData, null, 2),
               },
             ],
           };
+        } catch (error: any) {
+          console.error("Error listing projects:", error);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to list projects: ${error.message}`
+          );
         }
-        
-        const projects = data.projects.nodes.map((project: any) => ({
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          state: project.state,
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
-          completedAt: project.completedAt || null,
-          canceledAt: project.canceledAt || null,
-          startDate: project.startDate || null,
-          targetDate: project.targetDate || null,
-          health: project.health || null,
-          priority: project.priority !== undefined ? project.priority : null,
-          creator: project.creator ? {
-            id: project.creator.id,
-            name: project.creator.name,
-            email: project.creator.email
-          } : null,
-          lead: project.lead ? {
-            id: project.lead.id,
-            name: project.lead.name,
-            email: project.lead.email
-          } : null,
-          teams: project.teams && project.teams.nodes ? 
-            project.teams.nodes.map((team: any) => ({
-              id: team.id,
-              name: team.name,
-              key: team.key
-            })) : []
-        }));
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(projects, null, 2),
-            },
-          ],
-        };
       }
 
       case "search_issues": {
