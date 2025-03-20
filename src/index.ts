@@ -39,7 +39,7 @@ const linearClient = new LinearClient({
 const server = new Server(
   {
     name: "linear-mcp",
-    version: "37.0.0", // Match Linear SDK version
+    version: "38.0.0", // Updated to match the current Linear SDK version
   },
   {
     capabilities: {
@@ -48,10 +48,13 @@ const server = new Server(
         list_issues: true,
         update_issue: true,
         list_teams: true,
+        get_team: true,
         list_projects: true,
+        get_project: true,
         search_issues: true,
         get_issue: true,
         list_roadmaps: true,
+        get_roadmap: true,
         get_initiative: true,
         // Comments
         create_comment: true,
@@ -60,14 +63,17 @@ const server = new Server(
         delete_comment: true,
         // Labels
         list_labels: true,
+        get_label: true,
         create_label: true,
         update_label: true,
         // Cycles
         list_cycles: true,
+        get_cycle: true,
         create_cycle: true,
         update_cycle: true,
         // Documents
         list_documents: true,
+        get_document: true,
         create_document: true,
         update_document: true,
         // Users
@@ -78,6 +84,24 @@ const server = new Server(
     },
   }
 );
+
+/**
+ * Rate Limiting and Usage Patterns
+ * 
+ * The Linear API is subject to rate limiting. When making multiple API calls, consider:
+ * 
+ * 1. Batching: Where possible, batch operations to minimize API calls
+ * 2. Caching: Cache results that don't change frequently
+ * 3. Pagination: Use appropriate page sizes and limit requests
+ * 4. Error Handling: Always handle rate limit errors gracefully
+ * 
+ * Linear API rate limits (as of 2024):
+ * - Basic: 60 requests per minute
+ * - Query complexity limits also apply
+ * 
+ * When a rate limit is exceeded, the API returns a 429 Too Many Requests response.
+ * For more details, see: https://developers.linear.app/docs/graphql/working-with-the-graphql-api/rate-limiting
+ */
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
@@ -335,11 +359,57 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: "get_issue",
+      description: "Get detailed information about a specific issue",
+      inputSchema: {
+        type: "object",
+        properties: {
+          issueId: {
+            type: "string",
+            description: "Issue ID",
+          },
+        },
+        required: ["issueId"],
+      },
+    },
+    {
+      name: "search_issues",
+      description: "Search for issues using a text query",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "Search query text",
+          },
+          first: {
+            type: "number",
+            description: "Number of results to return (default: 50)",
+          },
+        },
+        required: ["query"],
+      },
+    },
+    {
       name: "list_teams",
       description: "List all teams in the workspace",
       inputSchema: {
         type: "object",
         properties: {},
+      },
+    },
+    {
+      name: "get_team",
+      description: "Get detailed information about a specific team",
+      inputSchema: {
+        type: "object",
+        properties: {
+          teamId: {
+            type: "string",
+            description: "Team ID",
+          },
+        },
+        required: ["teamId"],
       },
     },
     {
@@ -446,35 +516,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
-      name: "search_issues",
-      description: "Search for issues using a text query",
+      name: "get_project",
+      description: "Get detailed information about a specific project",
       inputSchema: {
         type: "object",
         properties: {
-          query: {
+          projectId: {
             type: "string",
-            description: "Search query text",
-          },
-          first: {
-            type: "number",
-            description: "Number of results to return (default: 50)",
+            description: "Project ID",
           },
         },
-        required: ["query"],
-      },
-    },
-    {
-      name: "get_issue",
-      description: "Get detailed information about a specific issue",
-      inputSchema: {
-        type: "object",
-        properties: {
-          issueId: {
-            type: "string",
-            description: "Issue ID",
-          },
-        },
-        required: ["issueId"],
+        required: ["projectId"],
       },
     },
     {
@@ -516,6 +568,28 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: "get_roadmap",
+      description: "Get detailed information about a specific roadmap",
+      inputSchema: {
+        type: "object",
+        properties: {
+          roadmapId: {
+            type: "string",
+            description: "Roadmap ID",
+          },
+          includeProjects: {
+            type: "boolean",
+            description: "Include project details in the response (default: true)",
+          },
+          includeArchived: {
+            type: "boolean",
+            description: "Include archived projects (default: false)",
+          },
+        },
+        required: ["roadmapId"],
+      },
+    },
+    {
       name: "get_initiative",
       description: "Get detailed information about a specific initiative",
       inputSchema: {
@@ -529,7 +603,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["initiativeId"],
       },
     },
-    // Comment tools
+    // Comments
     {
       name: "create_comment",
       description: "Create a new comment on an issue",
@@ -594,7 +668,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["commentId"],
       },
     },
-    // Label tools
+    // Labels
     {
       name: "list_labels",
       description: "List all labels in a team",
@@ -610,6 +684,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             description: "Number of labels to return (default: 50)",
           },
         },
+      },
+    },
+    {
+      name: "get_label",
+      description: "Get detailed information about a specific label",
+      inputSchema: {
+        type: "object",
+        properties: {
+          labelId: {
+            type: "string",
+            description: "Label ID",
+          },
+        },
+        required: ["labelId"],
       },
     },
     {
@@ -664,7 +752,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["labelId"],
       },
     },
-    // Cycle tools
+    // Cycles
     {
       name: "list_cycles",
       description: "List all cycles in a team",
@@ -680,6 +768,28 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             description: "Number of cycles to return (default: 50)",
           },
         },
+      },
+    },
+    {
+      name: "get_cycle",
+      description: "Get detailed information about a specific cycle",
+      inputSchema: {
+        type: "object",
+        properties: {
+          cycleId: {
+            type: "string",
+            description: "Cycle ID",
+          },
+          includeIssues: {
+            type: "boolean",
+            description: "Include issues in the cycle response (default: false)",
+          },
+          first: {
+            type: "number",
+            description: "Number of issues to return when includeIssues is true (default: 50, max: 100)",
+          }
+        },
+        required: ["cycleId"],
       },
     },
     {
@@ -742,7 +852,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["cycleId"],
       },
     },
-    // Document tools
+    // Documents
     {
       name: "list_documents",
       description: "List all documents",
@@ -758,6 +868,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             description: "Number of documents to return (default: 50)",
           },
         },
+      },
+    },
+    {
+      name: "get_document",
+      description: "Get detailed information about a specific document",
+      inputSchema: {
+        type: "object",
+        properties: {
+          documentId: {
+            type: "string",
+            description: "Document ID",
+          },
+        },
+        required: ["documentId"],
       },
     },
     {
@@ -843,7 +967,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         type: "object",
         properties: {},
       },
-    },
+    }
   ],
 }));
 
@@ -1049,6 +1173,34 @@ type GetUserArgs = {
 };
 
 type MeArgs = {};
+
+type GetTeamArgs = {
+  teamId: string;
+};
+
+type GetProjectArgs = {
+  projectId: string;
+};
+
+type GetRoadmapArgs = {
+  roadmapId: string;
+  includeProjects?: boolean;
+  includeArchived?: boolean; // Flag to include archived projects
+};
+
+type GetLabelArgs = {
+  labelId: string;
+};
+
+type GetCycleArgs = {
+  cycleId: string;
+  includeIssues?: boolean;
+  first?: number; // Number of issues to return when includeIssues is true
+};
+
+type GetDocumentArgs = {
+  documentId: string;
+};
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
@@ -1953,35 +2105,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const args = request.params.arguments as unknown as GetCommentArgs;
         
         try {
-          // Use the GraphQL client directly since the SDK doesn't expose comment by ID directly
-        const query = `
-            query Comment($id: String!) {
-              comment(id: $id) {
-                id
-                body
-                createdAt
-                updatedAt
-                user {
-              id
-              name
-                  email
-                }
-                issue {
-                  id
-                  title
-                  identifier
-                }
-              }
-            }
-          `;
-          
-          const variables = {
-            id: args.commentId,
-          };
-          
-          const result = await linearClient.client.rawRequest(query, variables);
-          const data = result.data as { comment: any };
-          const comment = data.comment;
+          const comment = await linearClient.comment({ id: args.commentId });
           
           if (!comment) {
             throw new McpError(
@@ -1989,12 +2113,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               `Comment not found: ${args.commentId}`
             );
           }
+          
+          const [user, issue] = await Promise.all([
+            comment.user,
+            comment.issue
+          ]);
+          
+          const commentData = {
+            id: comment.id,
+            body: comment.body,
+            createdAt: comment.createdAt,
+            updatedAt: comment.updatedAt,
+            user: user ? {
+              id: user.id,
+              name: user.name,
+              email: user.email
+            } : null,
+            issue: issue ? {
+              id: issue.id,
+              title: issue.title,
+              identifier: issue.identifier
+            } : null
+          };
 
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(comment, null, 2),
+                text: JSON.stringify(commentData, null, 2),
               },
             ],
           };
@@ -2010,22 +2156,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const args = request.params.arguments as unknown as UpdateCommentArgs;
         
         try {
-          // Use the GraphQL client directly since the SDK doesn't expose comment by ID directly
-          const getQuery = `
-            query Comment($id: String!) {
-              comment(id: $id) {
-                id
-              }
-            }
-          `;
-          
-          const getVariables = {
-            id: args.commentId,
-          };
-          
-          const getResult = await linearClient.client.rawRequest(getQuery, getVariables);
-          const getData = getResult.data as { comment: any };
-          const comment = getData.comment;
+          const comment = await linearClient.comment({ id: args.commentId });
           
           if (!comment) {
             throw new McpError(
@@ -2034,42 +2165,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             );
           }
           
-          const updateQuery = `
-            mutation CommentUpdate($id: String!, $input: CommentUpdateInput!) {
-              commentUpdate(id: $id, input: $input) {
-                success
-                comment {
-                  id
-                  body
-              createdAt
-              updatedAt
-                }
-              }
-            }
-          `;
-          
-          const updateVariables = {
-            id: args.commentId,
-            input: {
-              body: args.body,
-            },
-          };
-          
-          const updateResult = await linearClient.client.rawRequest(updateQuery, updateVariables);
-          const updateData = updateResult.data as { commentUpdate: { success: boolean; comment: any } };
-          
-          if (!updateData.commentUpdate.success) {
-            throw new McpError(
-              ErrorCode.InternalError,
-              "Failed to update comment"
-            );
-          }
+          const updatedComment = await comment.update({
+            body: args.body
+          });
 
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(updateData.commentUpdate.comment, null, 2),
+                text: JSON.stringify(updatedComment, null, 2),
               },
             ],
           };
@@ -2085,22 +2189,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const args = request.params.arguments as unknown as DeleteCommentArgs;
         
         try {
-          // Use the GraphQL client directly since the SDK doesn't expose comment by ID directly
-          const getQuery = `
-            query Comment($id: String!) {
-              comment(id: $id) {
-                id
-              }
-            }
-          `;
-          
-          const getVariables = {
-            id: args.commentId,
-          };
-          
-          const getResult = await linearClient.client.rawRequest(getQuery, getVariables);
-          const getData = getResult.data as { comment: any };
-          const comment = getData.comment;
+          const comment = await linearClient.comment({ id: args.commentId });
           
           if (!comment) {
             throw new McpError(
@@ -2109,26 +2198,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             );
           }
           
-          const deleteQuery = `
-            mutation CommentDelete($id: String!) {
-              commentDelete(id: $id) {
-                success
-              }
-            }
-          `;
-          
-          const deleteVariables = {
-            id: args.commentId,
-          };
-          
-          const deleteResult = await linearClient.client.rawRequest(deleteQuery, deleteVariables);
-          const deleteData = deleteResult.data as { commentDelete: { success: boolean } };
+          const result = await comment.delete();
 
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify({ success: deleteData.commentDelete.success }, null, 2),
+                text: JSON.stringify({ success: result }, null, 2),
               },
             ],
           };
@@ -2391,91 +2467,105 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { teamId, first = 50 } = args;
         
         try {
-          let query;
+          // Get all documents
+          const documentsConnection = await linearClient.documents({
+            first
+          });
+          
           let documents = [];
           
           if (teamId) {
-            // Use GraphQL directly since the SDK doesn't expose team.documents
-            const teamDocumentsQuery = `
-              query TeamDocuments($teamId: String!, $first: Int!) {
-                team(id: $teamId) {
-                  documents(first: $first) {
-                    nodes {
-                      id
-                      title
-                      url
-                      createdAt
-                      updatedAt
-              creator {
-                id
-                name
-              }
-                      team {
-                id
-                name
-                        key
-              }
-                      project {
-                  id
-                  name
-              }
-                    }
-                  }
-                }
-              }
-            `;
-            
-            const variables = {
-              teamId,
-              first,
-            };
-            
-            const result = await linearClient.client.rawRequest(teamDocumentsQuery, variables);
-            const data = result.data as { team: { documents: { nodes: any[] } } };
-            
-            if (!data.team) {
+            // Verify team exists
+            const team = await linearClient.team(teamId);
+            if (!team) {
               throw new McpError(
                 ErrorCode.MethodNotFound,
                 `Team not found: ${teamId}`
               );
             }
             
-            documents = data.team.documents.nodes;
-          } else {
-            // If no team ID, fetch all documents
-            const allDocumentsQuery = `
-              query AllDocuments($first: Int!) {
-                documents(first: $first) {
-                  nodes {
-                    id
-                    title
-                    url
-                    createdAt
-                    updatedAt
-                    creator {
-                    id
-                    name
-                  }
-                    team {
+            // Get all documents from this team using the document creation method
+            const teamDocumentsQuery = await linearClient.client.rawRequest(
+              `
+              query TeamDocuments($teamId: String!, $first: Int!) {
+                team(id: $teamId) {
+                  documents(first: $first) {
+                    nodes {
                       id
-                      name
-                      key
                     }
-                    project {
-                      id
-                      name
+                  }
                 }
               }
-            }
-        `;
-        
-        const variables = {
-              first,
-            };
+              `,
+              { teamId, first }
+            );
             
-            const result = await linearClient.client.rawRequest(allDocumentsQuery, variables);
-            const data = result.data as { documents: { nodes: any[] } };
-            documents = data.documents.nodes;
+            // Extract document IDs that belong to this team
+            const teamData = teamDocumentsQuery.data as any;
+            const teamDocIds = teamData?.team?.documents?.nodes?.map((doc: any) => doc.id) || [];
+            const teamDocIdSet = new Set(teamDocIds);
+            
+            // Filter documents by those belonging to the team
+            const teamDocuments = documentsConnection.nodes.filter(doc => teamDocIdSet.has(doc.id));
+            
+            documents = await Promise.all(
+              teamDocuments.map(async (doc) => {
+                // Get creator and project details
+                const [creator, project] = await Promise.all([
+                  doc.creator,
+                  doc.project
+                ]);
+                
+                // Construct document object with available properties
+                return {
+                  id: doc.id,
+                  title: doc.title,
+                  url: doc.url,
+                  createdAt: doc.createdAt,
+                  updatedAt: doc.updatedAt,
+                  teamId: teamId,
+                  teamName: team.name,
+                  creator: creator ? {
+                    id: creator.id,
+                    name: creator.name
+                  } : null,
+                  project: project ? {
+                    id: project.id,
+                    name: project.name
+                  } : null
+                };
+              })
+            );
+          } else {
+            // For all documents, get as much info as we can
+            // Note: We won't be able to get team info directly from documents
+            // So we'll just return documents without team info
+            documents = await Promise.all(
+              documentsConnection.nodes.map(async (doc) => {
+                // Get creator and project details
+                const [creator, project] = await Promise.all([
+                  doc.creator,
+                  doc.project
+                ]);
+                
+                // Construct document object with available properties
+                return {
+                  id: doc.id,
+                  title: doc.title,
+                  url: doc.url,
+                  createdAt: doc.createdAt,
+                  updatedAt: doc.updatedAt,
+                  creator: creator ? {
+                    id: creator.id,
+                    name: creator.name
+                  } : null,
+                  project: project ? {
+                    id: project.id,
+                    name: project.name
+                  } : null
+                };
+              })
+            );
           }
 
           return {
@@ -2662,6 +2752,901 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           throw new McpError(
             ErrorCode.InternalError,
             `Failed to get authenticated user: ${error.message}`
+          );
+        }
+      }
+
+      case "get_team": {
+        const args = request.params.arguments as unknown as GetTeamArgs;
+        
+        try {
+          const team = await linearClient.team(args.teamId);
+          
+          if (!team) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Team not found: ${args.teamId}`
+            );
+          }
+          
+          // Get organization info
+          const organization = await team.organization;
+          
+          // Get team members - use teamMembers query correctly
+          const membersQuery = await linearClient.teamMemberships();
+          // Filter members after getting their team relationship with await
+          const teamMembers = [];
+          for (const member of membersQuery.nodes) {
+            const memberTeam = await member.team;
+            if (memberTeam && memberTeam.id === team.id) {
+              teamMembers.push(member);
+            }
+          }
+          
+          const members = await Promise.all(
+            teamMembers.map(async (member) => {
+              const user = await member.user;
+              return {
+                id: member.id,
+                user: user ? {
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  displayName: user.displayName,
+                  avatarUrl: user.avatarUrl,
+                  active: user.active
+                } : null,
+                // Replace role with a safer property that exists
+                owner: member.owner,
+                createdAt: member.createdAt,
+                updatedAt: member.updatedAt
+              };
+            })
+          );
+          
+          // Get team states
+          const statesConnection = await team.states();
+          const states = statesConnection.nodes.map(state => ({
+            id: state.id,
+            name: state.name,
+            color: state.color,
+            type: state.type,
+            description: state.description,
+            position: state.position
+          }));
+          
+          // Fix template type to handle undefined description
+          let templates: Array<{id: string, name: string, description: string | null, type: string}> = [];
+          try {
+            const templatesConnection = await team.templates();
+            templates = templatesConnection.nodes.map(template => ({
+              id: template.id,
+              name: template.name,
+              description: template.description || null, // Handle undefined
+              type: template.type
+            }));
+          } catch (error) {
+            // Templates might not be available for all teams
+            console.error(`Error fetching templates for team ${args.teamId}:`, error);
+          }
+          
+          // Build comprehensive team object
+          const teamDetail = {
+            id: team.id,
+            name: team.name,
+            key: team.key,
+            description: team.description,
+            color: team.color,
+            private: team.private,
+            
+            // Stats and metrics
+            issueCount: team.issueCount,
+            issueEstimationMethod: team.issueEstimationType,
+            cycleIssueAutoAssignCompleted: team.cycleIssueAutoAssignCompleted,
+            cycleIssueAutoAssignStarted: team.cycleIssueAutoAssignStarted,
+            cycleCooldownTime: team.cycleCooldownTime,
+            cycleDuration: team.cycleDuration,
+            upcomingCycleCount: team.upcomingCycleCount,
+            timezone: team.timezone,
+            
+            // Settings
+            autoClosePeriod: team.autoClosePeriod,
+            autoCloseStateId: team.autoCloseStateId,
+            defaultIssueEstimate: team.defaultIssueEstimate,
+            defaultTemplateForMembersId: team.defaultTemplateForMembersId,
+            defaultTemplateForNonMembersId: team.defaultTemplateForNonMembersId,
+            draftWorkflowState: team.draftWorkflowState ? { id: (await team.draftWorkflowState)?.id } : null,
+            startWorkflowState: team.startWorkflowState ? { id: (await team.startWorkflowState)?.id } : null,
+            
+            // Integrations
+            integrations: {
+              slackIssueComments: team.slackIssueComments,
+              slackIssueStatuses: team.slackIssueStatuses,
+              slackNewIssue: team.slackNewIssue,
+            },
+            
+            // Dates
+            createdAt: team.createdAt,
+            updatedAt: team.updatedAt,
+            
+            // Related entities
+            organization: organization ? {
+              id: organization.id,
+              name: organization.name,
+              logoUrl: organization.logoUrl,
+              urlKey: organization.urlKey
+            } : null,
+            
+            // Collections
+            members,
+            states,
+            templates
+          };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(teamDetail, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error fetching team:", error);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to get team: ${error.message}`
+          );
+        }
+      }
+
+      case "get_project": {
+        const args = request.params.arguments as unknown as GetProjectArgs;
+        
+        try {
+          const project = await linearClient.project(args.projectId);
+          
+          if (!project) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Project not found: ${args.projectId}`
+            );
+          }
+          
+          // Get relationships
+          const [creator, lead, teamsConnection, issuesConnection] = await Promise.all([
+            project.creator,
+            project.lead,
+            project.teams(),
+            project.issues({ first: 100 })
+          ]);
+          
+          // Process teams
+          const teams = teamsConnection.nodes.map(team => ({
+            id: team.id,
+            name: team.name,
+            key: team.key
+          }));
+          
+          // Process members - use a more efficient approach to get actual project members
+          // instead of assuming all users are members of the project
+          let members = [];
+          try {
+            // Query project members directly using the project members API
+            const membersQuery = await linearClient.client.rawRequest(
+              `
+              query ProjectMembers($projectId: String!) {
+                project(id: $projectId) {
+                  members {
+                    nodes {
+                      id
+                      user {
+                        id
+                        name
+                        email
+                      }
+                    }
+                  }
+                }
+              }
+              `,
+              { projectId: args.projectId }
+            );
+            
+            // Process the response safely
+            const projectData = membersQuery.data as any;
+            if (projectData?.project?.members?.nodes) {
+              members = projectData.project.members.nodes;
+            } else {
+              // Fallback to project lead and creator as members if specific members not available
+              members = [];
+              if (creator) {
+                members.push({
+                  id: creator.id,
+                  user: {
+                    id: creator.id,
+                    name: creator.name,
+                    email: creator.email
+                  }
+                });
+              }
+              if (lead && lead.id !== creator?.id) {
+                members.push({
+                  id: lead.id,
+                  user: {
+                    id: lead.id,
+                    name: lead.name,
+                    email: lead.email
+                  }
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching members for project ${args.projectId}:`, error);
+            // Create minimal member list from creator and lead
+            members = [];
+            if (creator) {
+              members.push({
+                id: creator.id,
+                user: {
+                  id: creator.id,
+                  name: creator.name,
+                  email: creator.email
+                }
+              });
+            }
+            if (lead && lead.id !== creator?.id) {
+              members.push({
+                id: lead.id,
+                user: {
+                  id: lead.id,
+                  name: lead.name,
+                  email: lead.email
+                }
+              });
+            }
+          }
+          
+          // Get issue stats - use nodes length and filtering
+          const issueCount = issuesConnection.nodes.length;
+          const issueStats = {
+            total: issueCount,
+            completed: issuesConnection.nodes.filter(issue => issue.completedAt).length,
+            open: issuesConnection.nodes.filter(issue => !issue.completedAt && !issue.canceledAt).length,
+            canceled: issuesConnection.nodes.filter(issue => issue.canceledAt).length
+          };
+          
+          // Get project milestones using available SDK methods - optimized approach
+          let milestones: Array<{id: string, name: string, description: string | null, targetDate: string | null, completedAt: string | null}> = [];
+          try {
+            // Use a GraphQL query to directly fetch milestones for this project
+            // This avoids fetching all milestones and then filtering them individually
+            const milestonesQuery = await linearClient.client.rawRequest(
+              `
+              query ProjectMilestones($projectId: String!) {
+                project(id: $projectId) {
+                  milestones {
+                    nodes {
+                      id
+                      name
+                      description
+                      targetDate
+                    }
+                  }
+                }
+              }
+              `,
+              { projectId: args.projectId }
+            );
+            
+            // Process the response safely
+            const projectData = milestonesQuery.data as any;
+            if (projectData?.project?.milestones?.nodes) {
+              milestones = projectData.project.milestones.nodes.map((milestone: any) => ({
+                id: milestone.id,
+                name: milestone.name,
+                description: milestone.description || null,
+                targetDate: milestone.targetDate || null,
+                completedAt: null // Since completedAt is not available for milestones
+              }));
+            }
+          } catch (error) {
+            // Milestones might not be available for all projects
+            console.error(`Error fetching milestones for project ${args.projectId}:`, error);
+          }
+          
+          // Build comprehensive project object
+          const projectDetail = {
+            id: project.id,
+            name: project.name,
+            description: project.description,
+            slugId: project.slugId,
+            url: project.url,
+            color: project.color,
+            icon: project.icon,
+            
+            // Dates
+            startDate: project.startDate,
+            targetDate: project.targetDate,
+            createdAt: project.createdAt,
+            updatedAt: project.updatedAt,
+            completedAt: project.completedAt,
+            canceledAt: project.canceledAt,
+            
+            // Status and progress
+            state: project.state,
+            progress: project.progress,
+            sortOrder: project.sortOrder,
+            
+            // Settings
+            autoArchivedAt: project.autoArchivedAt,
+            issueCountHistory: project.issueCountHistory,
+            completedIssueCountHistory: project.completedIssueCountHistory,
+            scopeHistory: project.scopeHistory,
+            completedScopeHistory: project.completedScopeHistory,
+            trashed: project.trashed,
+            
+            // Relationships
+            creator: creator ? {
+              id: creator.id,
+              name: creator.name,
+              email: creator.email
+            } : null,
+            
+            lead: lead ? {
+              id: lead.id,
+              name: lead.name,
+              email: lead.email
+            } : null,
+            
+            // Collections
+            teams,
+            members,
+            issueStats,
+            milestones,
+          };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(projectDetail, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error fetching project:", error);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to get project: ${error.message}`
+          );
+        }
+      }
+
+      case "get_roadmap": {
+        const args = request.params.arguments as unknown as GetRoadmapArgs;
+        
+        try {
+          const roadmap = await linearClient.roadmap(args.roadmapId);
+          
+          if (!roadmap) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Roadmap not found: ${args.roadmapId}`
+            );
+          }
+          
+          // Get creator
+          const creator = await roadmap.creator;
+          
+          // Define a more specific interface for roadmap details
+          interface RoadmapDetail {
+            id: string;
+            name: string;
+            description?: string | null;
+            color?: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+            archivedAt?: Date | null;
+            url?: string;
+            creator?: {
+              id: string;
+              name?: string;
+            } | null;
+            projects?: Array<{
+              id: string;
+              name: string;
+              description?: string | null;
+              state?: string;
+              startDate?: string | null;
+              targetDate?: string | null;
+              progress?: number;
+              lead?: {
+                id: string;
+                name?: string;
+              } | null;
+              teams?: Array<{
+                id: string;
+                name?: string;
+                key?: string;
+              }>;
+            }> | { error: string };
+          }
+          
+          // Build base roadmap details
+          const roadmapDetail: RoadmapDetail = {
+            id: roadmap.id,
+            name: roadmap.name,
+            description: roadmap.description,
+            color: roadmap.color,
+            createdAt: roadmap.createdAt,
+            updatedAt: roadmap.updatedAt,
+            archivedAt: roadmap.archivedAt,
+            url: roadmap.url,
+            
+            creator: creator ? {
+              id: creator.id,
+              name: creator.name
+            } : null
+          };
+          
+          // Include projects if requested
+          const includeProjects = args.includeProjects !== false; // Default to true if not specified
+          
+          if (includeProjects) {
+            try {
+              const projectsConnection = await roadmap.projects({ 
+                first: 100,
+                includeArchived: args.includeProjects && args.includeArchived
+              });
+              
+              // Get detailed project info
+              const projects = await Promise.all(
+                projectsConnection.nodes.map(async (project) => {
+                  try {
+                    // Get relationships
+                    const [lead, teams] = await Promise.all([
+                      project.lead,
+                      project.teams()
+                    ]);
+                    
+                    return {
+                      id: project.id,
+                      name: project.name,
+                      description: project.description,
+                      state: project.state,
+                      startDate: project.startDate,
+                      targetDate: project.targetDate,
+                      progress: project.progress,
+                      
+                      lead: lead ? {
+                        id: lead.id,
+                        name: lead.name
+                      } : null,
+                      
+                      teams: teams.nodes.map(team => ({
+                        id: team.id,
+                        name: team.name,
+                        key: team.key
+                      }))
+                    };
+                  } catch (projectError) {
+                    console.error(`Error processing project ${project.id}:`, projectError);
+                    // Return basic project info if detailed info fails
+                    return {
+                      id: project.id,
+                      name: project.name,
+                      description: project.description,
+                      state: project.state,
+                      teams: []
+                    };
+                  }
+                })
+              );
+              
+              roadmapDetail.projects = projects;
+            } catch (error: any) {
+              // Handle rate limiting or other errors for projects
+              const errorMessage = error?.message || 'Unknown error';
+              
+              if (errorMessage.includes('Rate limit exceeded')) {
+                console.error(`Rate limit hit when fetching projects for roadmap ${args.roadmapId}`);
+                roadmapDetail.projects = { error: "Projects not loaded due to rate limiting. Try again later." };
+              } else {
+                console.error(`Error loading projects for roadmap ${args.roadmapId}:`, error);
+                roadmapDetail.projects = { error: `Error loading projects: ${errorMessage}` };
+              }
+            }
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(roadmapDetail, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error fetching roadmap:", error);
+          const errorMessage = error?.message || 'Unknown error';
+          
+          // Provide more specific error information based on error type
+          if (errorMessage.includes('Rate limit exceeded')) {
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Linear API rate limit exceeded. Try again later or use smaller page sizes. For more information see: https://developers.linear.app/docs/graphql/working-with-the-graphql-api/rate-limiting`
+            );
+          } else if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Roadmap not found: ${args.roadmapId}`
+            );
+          } else {
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Failed to get roadmap: ${errorMessage}`
+            );
+          }
+        }
+      }
+
+      case "get_label": {
+        const args = request.params.arguments as unknown as GetLabelArgs;
+        
+        try {
+          const label = await linearClient.issueLabel(args.labelId);
+          
+          if (!label) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Label not found: ${args.labelId}`
+            );
+          }
+          
+          // Get related entities
+          const [team, creator, parent] = await Promise.all([
+            label.team,
+            label.creator,
+            label.parent
+          ]);
+          
+          // Get usage statistics - use issues query with a count
+          const issuesConnection = await linearClient.issues({
+            filter: {
+              labels: {
+                some: {
+                  id: {
+                    eq: args.labelId
+                  }
+                }
+              }
+            }
+          });
+          
+          // Build comprehensive label object
+          const labelDetail = {
+            id: label.id,
+            name: label.name,
+            description: label.description,
+            color: label.color,
+            
+            // Usage stats - use the array length
+            issueCount: issuesConnection.nodes.length,
+            
+            // Relationships
+            team: team ? {
+              id: team.id,
+              name: team.name,
+              key: team.key
+            } : null,
+            
+            creator: creator ? {
+              id: creator.id,
+              name: creator.name,
+              email: creator.email
+            } : null,
+            
+            parent: parent ? {
+              id: parent.id,
+              name: parent.name,
+              color: parent.color
+            } : null,
+            
+            // Metadata
+            createdAt: label.createdAt,
+            updatedAt: label.updatedAt,
+            archivedAt: label.archivedAt
+          };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(labelDetail, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error fetching label:", error);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to get label: ${error.message}`
+          );
+        }
+      }
+
+      case "get_cycle": {
+        const args = request.params.arguments as unknown as GetCycleArgs;
+        
+        try {
+          const cycle = await linearClient.cycle(args.cycleId);
+          
+          if (!cycle) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Cycle not found: ${args.cycleId}`
+            );
+          }
+          
+          // Get related entities
+          const team = await cycle.team;
+          
+          // Get cycle statistics - create a brand new object
+          // and don't use the complex cycle.uncompletedIssuesUponClose property at all
+          const cycleStats = {
+            issueCountHistory: (cycle.issueCountHistory || []) as any[],
+            completedIssueCountHistory: (cycle.completedIssueCountHistory || []) as any[],
+            scopeHistory: (cycle.scopeHistory || []) as any[],
+            completedScopeHistory: (cycle.completedScopeHistory || []) as any[],
+            inProgressScopeHistory: (cycle.inProgressScopeHistory || []) as any[],
+            uncompletedIssuesUponClose: 0 // Just use a default value of 0
+          };
+          
+          // Define a more specific interface for cycle details
+          interface CycleDetail {
+            id: string;
+            name: string | null;
+            description?: string | null;
+            number: number;
+            startsAt?: Date | null;
+            endsAt?: Date | null;
+            completedAt?: Date | null;
+            createdAt: Date;
+            updatedAt: Date;
+            progress?: number;
+            team?: {
+              id: string;
+              name?: string;
+              key?: string;
+            } | null;
+            stats: {
+              issueCountHistory: any[];
+              completedIssueCountHistory: any[];
+              scopeHistory: any[];
+              completedScopeHistory: any[];
+              inProgressScopeHistory: any[];
+              uncompletedIssuesUponClose: number;
+            };
+            issues?: Array<{
+              id: string;
+              title: string;
+              identifier: string;
+              status?: string;
+              priority?: number;
+              createdAt: Date;
+              updatedAt: Date;
+              completedAt?: Date | null;
+              canceledAt?: Date | null;
+              dueDate?: string | null;
+            }> | { error: string };
+          }
+          
+          // Build cycle object with proper type
+          const cycleDetail: CycleDetail = {
+            id: cycle.id,
+            name: cycle.name || null,
+            description: cycle.description,
+            number: cycle.number,
+            
+            // Dates
+            startsAt: cycle.startsAt,
+            endsAt: cycle.endsAt,
+            completedAt: cycle.completedAt,
+            createdAt: cycle.createdAt,
+            updatedAt: cycle.updatedAt,
+            
+            // Status
+            progress: cycle.progress,
+            
+            // Team relationship
+            team: team ? {
+              id: team.id,
+              name: team.name,
+              key: team.key
+            } : null,
+            
+            // Statistics - use the prepared stats object
+            stats: cycleStats
+          };
+          
+          // Include issues if requested
+          if (args.includeIssues) {
+            try {
+              // Use a configurable page size with a reasonable default
+              const pageSize = Math.min(100, Math.max(1, args.first || 50));
+              
+              // Query issues using a more efficient approach that includes needed relationships
+              // This reduces the number of follow-up API calls needed
+              const issuesQuery = await linearClient.client.rawRequest(
+                `
+                query CycleIssues($cycleId: String!, $first: Int!) {
+                  cycle(id: $cycleId) {
+                    issues(first: $first) {
+                      nodes {
+                        id
+                        title
+                        identifier
+                        priority
+                        createdAt
+                        updatedAt
+                        completedAt
+                        canceledAt
+                        dueDate
+                        state {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+                `,
+                { cycleId: args.cycleId, first: pageSize }
+              );
+              
+              // Process the response safely
+              const cycleData = issuesQuery.data as any;
+              if (cycleData?.cycle?.issues?.nodes) {
+                const issuesData = cycleData.cycle.issues.nodes;
+                
+                cycleDetail.issues = issuesData.map((issue: any) => ({
+                  id: issue.id,
+                  title: issue.title,
+                  identifier: issue.identifier,
+                  status: issue.state ? issue.state.name : undefined,
+                  priority: issue.priority,
+                  createdAt: new Date(issue.createdAt),
+                  updatedAt: new Date(issue.updatedAt),
+                  completedAt: issue.completedAt ? new Date(issue.completedAt) : null,
+                  canceledAt: issue.canceledAt ? new Date(issue.canceledAt) : null,
+                  dueDate: issue.dueDate
+                }));
+              } else {
+                cycleDetail.issues = [];
+              }
+            } catch (error: any) {
+              const errorMessage = error?.message || 'Unknown error';
+              
+              if (errorMessage.includes('Rate limit exceeded')) {
+                console.error(`Rate limit hit when fetching issues for cycle ${args.cycleId}`);
+                cycleDetail.issues = { error: "Issues not loaded due to rate limiting. Try again later." };
+              } else {
+                console.error(`Error loading issues for cycle ${args.cycleId}:`, error);
+                cycleDetail.issues = { error: `Error loading issues: ${errorMessage}` };
+              }
+            }
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(cycleDetail, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error fetching cycle:", error);
+          const errorMessage = error?.message || 'Unknown error';
+          
+          // Provide more specific error information based on error type
+          if (errorMessage.includes('Rate limit exceeded')) {
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Linear API rate limit exceeded. Try again later or use smaller page sizes.`
+            );
+          } else if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Cycle not found: ${args.cycleId}`
+            );
+          } else {
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Failed to get cycle: ${errorMessage}`
+            );
+          }
+        }
+      }
+
+      case "get_document": {
+        const args = request.params.arguments as unknown as GetDocumentArgs;
+        
+        try {
+          const document = await linearClient.document(args.documentId);
+          
+          if (!document) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Document not found: ${args.documentId}`
+            );
+          }
+          
+          // Get related entities
+          const [creator, project] = await Promise.all([
+            document.creator,
+            document.project
+          ]);
+          
+          // Get team (requires a workaround since there's no direct way to get it)
+          let team = null;
+          if (project) {
+            const teamsConnection = await project.teams();
+            if (teamsConnection.nodes.length > 0) {
+              const firstTeam = teamsConnection.nodes[0];
+              team = {
+                id: firstTeam.id,
+                name: firstTeam.name,
+                key: firstTeam.key
+              };
+            }
+          }
+          
+          // Build comprehensive document object
+          const documentDetail = {
+            id: document.id,
+            title: document.title,
+            content: document.content, // Return the markdown content
+            icon: document.icon,
+            color: document.color,
+            url: document.url,
+            
+            // Metadata
+            createdAt: document.createdAt,
+            updatedAt: document.updatedAt,
+            archivedAt: document.archivedAt,
+            trashed: document.trashed,
+            
+            // Relationships
+            creator: creator ? {
+              id: creator.id,
+              name: creator.name,
+              email: creator.email
+            } : null,
+            
+            project: project ? {
+              id: project.id,
+              name: project.name,
+              state: project.state
+            } : null,
+            
+            team
+          };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(documentDetail, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error fetching document:", error);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to get document: ${error.message}`
           );
         }
       }
