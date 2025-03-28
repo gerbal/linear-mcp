@@ -2913,12 +2913,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             );
           }
           
-          // Get relationships
-          const [creator, lead, teamsConnection, issuesConnection] = await Promise.all([
+          // Get relationships, milestones, and updates
+          const [creator, lead, teamsConnection, issuesConnection, milestonesConnection, updatesConnection] = await Promise.all([
             project.creator,
             project.lead,
             project.teams(),
-            project.issues({ first: 100 })
+            project.issues({ first: 100 }),
+            project.projectMilestones({ first: 50 }), // Fetch milestones using SDK method
+            project.projectUpdates({ first: 10 })      // Fetch latest 10 project updates
           ]);
           
           // Process teams
@@ -3016,44 +3018,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             canceled: issuesConnection.nodes.filter(issue => issue.canceledAt).length
           };
           
-          // Get project milestones using available SDK methods - optimized approach
-          let milestones: Array<{id: string, name: string, description: string | null, targetDate: string | null, completedAt: string | null}> = [];
-          try {
-            // Use a GraphQL query to directly fetch milestones for this project
-            // This avoids fetching all milestones and then filtering them individually
-            const milestonesQuery = await linearClient.client.rawRequest(
-              `
-              query ProjectMilestones($projectId: String!) {
-                project(id: $projectId) {
-                  milestones {
-                    nodes {
-                      id
-                      name
-                      description
-                      targetDate
-                    }
-                  }
-                }
-              }
-              `,
-              { projectId: args.projectId }
-            );
-            
-            // Process the response safely
-            const projectData = milestonesQuery.data as any;
-            if (projectData?.project?.milestones?.nodes) {
-              milestones = projectData.project.milestones.nodes.map((milestone: any) => ({
-                id: milestone.id,
-                name: milestone.name,
-                description: milestone.description || null,
-                targetDate: milestone.targetDate || null,
-                completedAt: null // Since completedAt is not available for milestones
-              }));
-            }
-          } catch (error) {
-            // Milestones might not be available for all projects
-            console.error(`Error fetching milestones for project ${args.projectId}:`, error);
-          }
+          // Process project milestones from SDK call
+          const milestones = await Promise.all(milestonesConnection.nodes.map(async (milestone) => {
+            // Assuming ProjectMilestone has these fields based on common patterns and previous query
+            // You might need to adjust based on the actual ProjectMilestone definition if different
+            return {
+              id: milestone.id,
+              name: milestone.name,
+              description: milestone.description || null,
+              targetDate: milestone.targetDate || null,
+              // Additional fields like completedAt might require fetching the full milestone if needed
+              // sortOrder: milestone.sortOrder, 
+              // createdAt: milestone.createdAt,
+              // updatedAt: milestone.updatedAt,
+            };
+          }));
+
+          // Process project updates
+          const updates = await Promise.all(updatesConnection.nodes.map(async (update) => {
+            const user = await update.user; // Fetch the user who created the update
+            return {
+              id: update.id,
+              createdAt: update.createdAt,
+              updatedAt: update.updatedAt,
+              body: update.body,
+              health: update.health,
+              user: user ? { id: user.id, name: user.name } : null,
+              url: update.url
+            };
+          }));
           
           // Build comprehensive project object
           const projectDetail = {
@@ -3104,6 +3097,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             members,
             issueStats,
             milestones,
+            updates
           };
 
           return {
