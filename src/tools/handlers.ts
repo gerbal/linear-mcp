@@ -540,11 +540,56 @@ export class ToolHandlers {
         );
       }
 
+      // Fetch related resources in parallel
+      const [
+        attachments,
+        labels,
+        state,
+        assignee,
+        team,
+        project,
+        commentsConnection,
+        children,
+        parent
+      ] = await Promise.all([
+        issue.attachments(),
+        issue.labels(),
+        issue.state,
+        issue.assignee,
+        issue.team,
+        issue.project,
+        issue.comments({ first: 100 }), // Limit to latest 100 comments
+        issue.children(),
+        issue.parent
+      ]);
+
+      // Fetch comment users in parallel
+      const comments = await Promise.all(
+        commentsConnection.nodes.map(async (comment) => ({
+          ...comment,
+          user: await comment.user
+        }))
+      );
+
+      // Include all related data in the response
+      const issueData = {
+        ...issue,
+        attachments: attachments.nodes,
+        labels: labels.nodes,
+        state,
+        assignee,
+        team,
+        project,
+        comments,
+        children: children.nodes,
+        parent
+      };
+
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(issue, null, 2),
+            text: JSON.stringify(issueData, null, 2),
           },
         ],
       };
