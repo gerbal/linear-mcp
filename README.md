@@ -71,6 +71,43 @@ export LINEAR_API_KEY=your-api-key
 npx @ibraheem4/linear-mcp
 ```
 
+## Read-Only Mode
+
+The server supports a read-only mode that only exposes read operations. This is useful for:
+- Limiting the number of available tools (helpful for environments with tool limits like Cursor)
+- Preventing accidental modifications to Linear data
+- Safely exploring and querying Linear data without risk of changes
+
+Enable read-only mode by setting the `LINEAR_MCP_READ_ONLY` environment variable:
+
+```bash
+LINEAR_MCP_READ_ONLY=true LINEAR_API_KEY=your-api-key npx @ibraheem4/linear-mcp
+```
+
+In read-only mode, only the following operations are available:
+- `list_issues` - List issues with optional filters
+- `list_teams` - List all teams
+- `get_team` - Get team details
+- `list_projects` - List all projects
+- `get_project` - Get project details
+- `search_issues` - Search for issues
+- `get_issue` - Get issue details
+- `list_roadmaps` - List all roadmaps
+- `get_roadmap` - Get roadmap details
+- `get_initiative` - Get initiative details
+- `get_comment` - Get comment details
+- `list_labels` - List all labels
+- `get_label` - Get label details
+- `list_cycles` - List all cycles
+- `get_cycle` - Get cycle details
+- `list_documents` - List all documents
+- `get_document` - Get document details
+- `list_users` - List all users
+- `get_user` - Get user details
+- `me` - Get current user info
+
+Write operations are completely unavailable in read-only mode.
+
 ## Development Setup
 
 1. Clone the repository:

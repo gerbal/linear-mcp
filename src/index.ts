@@ -97,55 +97,623 @@ if (!API_KEY) {
   process.exit(1);
 }
 
+// Read-only mode - only expose read operations when true
+const READ_ONLY_MODE = process.env.LINEAR_MCP_READ_ONLY === "true";
+
 const linearClient = new LinearClient({
   apiKey: API_KEY,
 });
 
+// Define read-only tools that are always available
+const READ_TOOLS = [
+  {
+    name: "list_issues",
+    description: "List issues with optional filters",
+    inputSchema: {
+      type: "object",
+      properties: {
+        teamId: {
+          type: "string",
+          description: "Filter by team ID (optional)",
+        },
+        assigneeId: {
+          type: "string",
+          description: "Filter by assignee ID (optional)",
+        },
+        status: {
+          type: "string",
+          description: "Filter by status (optional)",
+        },
+        first: {
+          type: "number",
+          description: "Number of issues to return (default: 50)",
+        },
+      },
+    },
+  },
+  {
+    name: "list_teams",
+    description: "List all teams in the workspace",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "get_team",
+    description: "Get team details",
+    inputSchema: {
+      type: "object",
+      properties: {
+        teamId: {
+          type: "string",
+          description: "Team ID",
+        },
+      },
+      required: ["teamId"],
+    },
+  },
+  {
+    name: "list_projects",
+    description: "List all projects",
+    inputSchema: {
+      type: "object",
+      properties: {
+        teamId: {
+          type: "string",
+          description: "Filter by team ID (optional)",
+        },
+        first: {
+          type: "number",
+          description: "Number of projects to return (default: 50)",
+        },
+      },
+    },
+  },
+  {
+    name: "get_project",
+    description: "Get project details",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: {
+          type: "string",
+          description: "Project ID",
+        },
+      },
+      required: ["projectId"],
+    },
+  },
+  {
+    name: "search_issues",
+    description: "Search for issues using query text",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Search query text",
+        },
+        first: {
+          type: "number",
+          description: "Number of issues to return (default: 50)",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "get_issue",
+    description: "Get detailed information about a specific issue",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issueId: {
+          type: "string",
+          description: "Issue ID",
+        },
+      },
+      required: ["issueId"],
+    },
+  },
+  {
+    name: "list_roadmaps",
+    description: "List all roadmaps",
+    inputSchema: {
+      type: "object",
+      properties: {
+        first: {
+          type: "number",
+          description: "Number of roadmaps to return (default: 50)",
+        },
+      },
+    },
+  },
+  {
+    name: "get_roadmap",
+    description: "Get roadmap details",
+    inputSchema: {
+      type: "object",
+      properties: {
+        roadmapId: {
+          type: "string",
+          description: "Roadmap ID",
+        },
+      },
+      required: ["roadmapId"],
+    },
+  },
+  {
+    name: "get_initiative",
+    description: "Get detailed information about a specific initiative",
+    inputSchema: {
+      type: "object",
+      properties: {
+        initiativeId: {
+          type: "string",
+          description: "Initiative ID",
+        },
+      },
+      required: ["initiativeId"],
+    },
+  },
+  {
+    name: "get_comment",
+    description: "Get a specific comment",
+    inputSchema: {
+      type: "object",
+      properties: {
+        commentId: {
+          type: "string",
+          description: "Comment ID",
+        },
+      },
+      required: ["commentId"],
+    },
+  },
+  {
+    name: "list_labels",
+    description: "List all labels in a team",
+    inputSchema: {
+      type: "object",
+      properties: {
+        teamId: {
+          type: "string",
+          description: "Team ID to list labels from (optional)",
+        },
+        first: {
+          type: "number",
+          description: "Number of labels to return (default: 50)",
+        },
+      },
+    },
+  },
+  {
+    name: "get_label",
+    description: "Get label details",
+    inputSchema: {
+      type: "object",
+      properties: {
+        labelId: {
+          type: "string",
+          description: "Label ID",
+        },
+      },
+      required: ["labelId"],
+    },
+  },
+  {
+    name: "list_cycles",
+    description: "List all cycles in a team",
+    inputSchema: {
+      type: "object",
+      properties: {
+        teamId: {
+          type: "string",
+          description: "Team ID (optional)",
+        },
+        first: {
+          type: "number",
+          description: "Number of cycles to return (default: 50)",
+        },
+      },
+    },
+  },
+  {
+    name: "get_cycle",
+    description: "Get cycle details",
+    inputSchema: {
+      type: "object",
+      properties: {
+        cycleId: {
+          type: "string",
+          description: "Cycle ID",
+        },
+      },
+      required: ["cycleId"],
+    },
+  },
+  {
+    name: "list_documents",
+    description: "List all documents",
+    inputSchema: {
+      type: "object",
+      properties: {
+        teamId: {
+          type: "string",
+          description: "Team ID to filter documents (optional)",
+        },
+        first: {
+          type: "number",
+          description: "Number of documents to return (default: 50)",
+        },
+      },
+    },
+  },
+  {
+    name: "get_document",
+    description: "Get document details",
+    inputSchema: {
+      type: "object",
+      properties: {
+        documentId: {
+          type: "string",
+          description: "Document ID",
+        },
+      },
+      required: ["documentId"],
+    },
+  },
+  {
+    name: "list_users",
+    description: "List all users in the workspace",
+    inputSchema: {
+      type: "object",
+      properties: {
+        first: {
+          type: "number",
+          description: "Number of users to return (default: 50)",
+        },
+      },
+    },
+  },
+  {
+    name: "get_user",
+    description: "Get detailed information about a specific user",
+    inputSchema: {
+      type: "object",
+      properties: {
+        userId: {
+          type: "string",
+          description: "User ID",
+        },
+      },
+      required: ["userId"],
+    },
+  },
+  {
+    name: "me",
+    description: "Get information about the authenticated user",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+];
+
+// Define write tools that are only available when not in read-only mode
+const WRITE_TOOLS = [
+  {
+    name: "create_issue",
+    description: "Create a new issue in Linear",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "Issue title",
+        },
+        description: {
+          type: "string",
+          description: "Issue description (markdown supported)",
+        },
+        teamId: {
+          type: "string",
+          description: "Team ID",
+        },
+        assigneeId: {
+          type: "string",
+          description: "Assignee user ID (optional)",
+        },
+        priority: {
+          type: "number",
+          description: "Priority (0-4, optional)",
+          minimum: 0,
+          maximum: 4,
+        },
+        labels: {
+          type: "array",
+          items: {
+            type: "string",
+          },
+          description: "Label IDs to apply (optional)",
+        },
+      },
+      required: ["title", "teamId"],
+    },
+  },
+  {
+    name: "update_issue",
+    description: "Update an existing issue",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issueId: {
+          type: "string",
+          description: "Issue ID",
+        },
+        title: {
+          type: "string",
+          description: "New title (optional)",
+        },
+        description: {
+          type: "string",
+          description: "New description (optional)",
+        },
+        status: {
+          type: "string",
+          description: "New status (optional)",
+        },
+        assigneeId: {
+          type: "string",
+          description: "New assignee ID (optional)",
+        },
+        priority: {
+          type: "number",
+          description: "New priority (0-4, optional)",
+          minimum: 0,
+          maximum: 4,
+        },
+        labels: {
+          type: "array",
+          items: {
+            type: "string",
+          },
+          description: "Label IDs to apply (optional)",
+        },
+      },
+      required: ["issueId"],
+    },
+  },
+  {
+    name: "create_comment",
+    description: "Create a new comment on an issue",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issueId: {
+          type: "string",
+          description: "ID of the issue to comment on",
+        },
+        body: {
+          type: "string",
+          description: "Comment content (markdown supported)",
+        },
+      },
+      required: ["issueId", "body"],
+    },
+  },
+  {
+    name: "update_comment",
+    description: "Update an existing comment",
+    inputSchema: {
+      type: "object",
+      properties: {
+        commentId: {
+          type: "string",
+          description: "Comment ID",
+        },
+        body: {
+          type: "string",
+          description: "Updated comment content (markdown supported)",
+        },
+      },
+      required: ["commentId", "body"],
+    },
+  },
+  {
+    name: "delete_comment",
+    description: "Delete a comment",
+    inputSchema: {
+      type: "object",
+      properties: {
+        commentId: {
+          type: "string",
+          description: "Comment ID",
+        },
+      },
+      required: ["commentId"],
+    },
+  },
+  {
+    name: "create_label",
+    description: "Create a new label in a team",
+    inputSchema: {
+      type: "object",
+      properties: {
+        teamId: {
+          type: "string",
+          description: "Team ID where the label will be created",
+        },
+        name: {
+          type: "string",
+          description: "Label name",
+        },
+        color: {
+          type: "string",
+          description: "Label color (hex code, optional)",
+        },
+        description: {
+          type: "string",
+          description: "Label description (optional)",
+        },
+      },
+      required: ["teamId", "name"],
+    },
+  },
+  {
+    name: "update_label",
+    description: "Update an existing label",
+    inputSchema: {
+      type: "object",
+      properties: {
+        labelId: {
+          type: "string",
+          description: "Label ID",
+        },
+        name: {
+          type: "string",
+          description: "New label name (optional)",
+        },
+        color: {
+          type: "string",
+          description: "New label color (hex code, optional)",
+        },
+        description: {
+          type: "string",
+          description: "New label description (optional)",
+        },
+      },
+      required: ["labelId"],
+    },
+  },
+  {
+    name: "create_cycle",
+    description: "Create a new cycle for a team",
+    inputSchema: {
+      type: "object",
+      properties: {
+        teamId: {
+          type: "string",
+          description: "Team ID",
+        },
+        name: {
+          type: "string",
+          description: "Cycle name",
+        },
+        description: {
+          type: "string",
+          description: "Cycle description (optional)",
+        },
+        startDate: {
+          type: "string",
+          description: "Cycle start date (ISO format, e.g. 2023-04-01)",
+        },
+        endDate: {
+          type: "string",
+          description: "Cycle end date (ISO format, e.g. 2023-04-15)",
+        },
+      },
+      required: ["teamId", "name", "startDate", "endDate"],
+    },
+  },
+  {
+    name: "update_cycle",
+    description: "Update an existing cycle",
+    inputSchema: {
+      type: "object",
+      properties: {
+        cycleId: {
+          type: "string",
+          description: "Cycle ID",
+        },
+        name: {
+          type: "string",
+          description: "New cycle name (optional)",
+        },
+        description: {
+          type: "string",
+          description: "New cycle description (optional)",
+        },
+        startDate: {
+          type: "string",
+          description: "New cycle start date (ISO format, optional)",
+        },
+        endDate: {
+          type: "string",
+          description: "New cycle end date (ISO format, optional)",
+        },
+      },
+      required: ["cycleId"],
+    },
+  },
+  {
+    name: "create_document",
+    description: "Create a new document",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "Document title",
+        },
+        content: {
+          type: "string",
+          description: "Document content (markdown supported)",
+        },
+        teamId: {
+          type: "string",
+          description: "Team ID the document belongs to",
+        },
+        projectId: {
+          type: "string",
+          description: "Project ID the document is associated with (optional)",
+        },
+      },
+      required: ["title", "content", "teamId"],
+    },
+  },
+  {
+    name: "update_document",
+    description: "Update an existing document",
+    inputSchema: {
+      type: "object",
+      properties: {
+        documentId: {
+          type: "string",
+          description: "Document ID",
+        },
+        title: {
+          type: "string",
+          description: "New document title (optional)",
+        },
+        content: {
+          type: "string",
+          description: "New document content (markdown supported, optional)",
+        },
+      },
+      required: ["documentId"],
+    },
+  },
+];
+
+// Create a map of available tools based on read-only mode
+const availableTools = {
+  ...Object.fromEntries(READ_TOOLS.map((tool) => [tool.name, true])),
+  ...(!READ_ONLY_MODE
+    ? Object.fromEntries(WRITE_TOOLS.map((tool) => [tool.name, true]))
+    : {}),
+};
+
+// Initialize server with available tools
 const server = new Server(
   {
     name: "linear-mcp",
-    version: "38.0.0", // Updated to match the current Linear SDK version
+    version: "38.0.0",
   },
   {
     capabilities: {
-      tools: {
-        create_issue: true,
-        list_issues: true,
-        update_issue: true,
-        list_teams: true,
-        get_team: true,
-        list_projects: true,
-        get_project: true,
-        search_issues: true,
-        get_issue: true,
-        list_roadmaps: true,
-        get_roadmap: true,
-        get_initiative: true,
-        // Comments
-        create_comment: true,
-        get_comment: true,
-        update_comment: true,
-        delete_comment: true,
-        // Labels
-        list_labels: true,
-        get_label: true,
-        create_label: true,
-        update_label: true,
-        // Cycles
-        list_cycles: true,
-        get_cycle: true,
-        create_cycle: true,
-        update_cycle: true,
-        // Documents
-        list_documents: true,
-        get_document: true,
-        create_document: true,
-        update_document: true,
-        // Users
-        list_users: true,
-        get_user: true,
-        me: true,
-      },
+      tools: availableTools,
     },
   },
 );
@@ -169,907 +737,8 @@ const server = new Server(
  */
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    {
-      name: "create_issue",
-      description: "Create a new issue in Linear",
-      inputSchema: {
-        type: "object",
-        properties: {
-          title: {
-            type: "string",
-            description: "Issue title",
-          },
-          description: {
-            type: "string",
-            description: "Issue description (markdown supported)",
-          },
-          teamId: {
-            type: "string",
-            description: "Team ID",
-          },
-          assigneeId: {
-            type: "string",
-            description: "Assignee user ID (optional)",
-          },
-          priority: {
-            type: "number",
-            description: "Priority (0-4, optional)",
-            minimum: 0,
-            maximum: 4,
-          },
-          labels: {
-            type: "array",
-            items: {
-              type: "string",
-            },
-            description: "Label IDs to apply (optional)",
-          },
-        },
-        required: ["title", "teamId"],
-      },
-    },
-    {
-      name: "list_issues",
-      description: "List issues with optional filters",
-      inputSchema: {
-        type: "object",
-        properties: {
-          teamId: {
-            type: "string",
-            description: "Filter by team ID (optional)",
-          },
-          assigneeId: {
-            type: "string",
-            description: "Filter by assignee ID (optional)",
-          },
-          status: {
-            type: "string",
-            description: "Filter by status (optional)",
-          },
-          projectId: {
-            type: "string",
-            description: "Filter by project ID (optional)",
-          },
-          creatorId: {
-            type: "string",
-            description: "Filter by creator ID (optional)",
-          },
-          priority: {
-            type: "number",
-            description: "Filter by priority (0-4, optional)",
-            minimum: 0,
-            maximum: 4,
-          },
-          dueDate: {
-            type: "string",
-            description: "Filter by exact due date (ISO format, optional)",
-          },
-          dueDateGte: {
-            type: "string",
-            description:
-              "Filter by due date greater than or equal (ISO format, optional)",
-          },
-          dueDateLte: {
-            type: "string",
-            description:
-              "Filter by due date less than or equal (ISO format, optional)",
-          },
-          createdAtGte: {
-            type: "string",
-            description:
-              "Filter by created date greater than or equal (ISO format, optional)",
-          },
-          createdAtLte: {
-            type: "string",
-            description:
-              "Filter by created date less than or equal (ISO format, optional)",
-          },
-          updatedAtGte: {
-            type: "string",
-            description:
-              "Filter by updated date greater than or equal (ISO format, optional)",
-          },
-          updatedAtLte: {
-            type: "string",
-            description:
-              "Filter by updated date less than or equal (ISO format, optional)",
-          },
-          completedAtGte: {
-            type: "string",
-            description:
-              "Filter by completed date greater than or equal (ISO format, optional)",
-          },
-          completedAtLte: {
-            type: "string",
-            description:
-              "Filter by completed date less than or equal (ISO format, optional)",
-          },
-          canceledAtGte: {
-            type: "string",
-            description:
-              "Filter by canceled date greater than or equal (ISO format, optional)",
-          },
-          canceledAtLte: {
-            type: "string",
-            description:
-              "Filter by canceled date less than or equal (ISO format, optional)",
-          },
-          startedAtGte: {
-            type: "string",
-            description:
-              "Filter by started date greater than or equal (ISO format, optional)",
-          },
-          startedAtLte: {
-            type: "string",
-            description:
-              "Filter by started date less than or equal (ISO format, optional)",
-          },
-          archivedAtGte: {
-            type: "string",
-            description:
-              "Filter by archived date greater than or equal (ISO format, optional)",
-          },
-          archivedAtLte: {
-            type: "string",
-            description:
-              "Filter by archived date less than or equal (ISO format, optional)",
-          },
-          title: {
-            type: "string",
-            description: "Filter by exact title match (optional)",
-          },
-          titleContains: {
-            type: "string",
-            description: "Filter by title containing text (optional)",
-          },
-          description: {
-            type: "string",
-            description: "Filter by exact description match (optional)",
-          },
-          descriptionContains: {
-            type: "string",
-            description: "Filter by description containing text (optional)",
-          },
-          number: {
-            type: "number",
-            description: "Filter by issue number (optional)",
-          },
-          labelIds: {
-            type: "array",
-            items: {
-              type: "string",
-            },
-            description: "Filter by label IDs (optional)",
-          },
-          cycleId: {
-            type: "string",
-            description: "Filter by cycle ID (optional)",
-          },
-          parentId: {
-            type: "string",
-            description: "Filter by parent issue ID (optional)",
-          },
-          estimate: {
-            type: "number",
-            description: "Filter by exact estimate value (optional)",
-          },
-          estimateGte: {
-            type: "number",
-            description: "Filter by estimate greater than or equal (optional)",
-          },
-          estimateLte: {
-            type: "number",
-            description: "Filter by estimate less than or equal (optional)",
-          },
-          isBlocked: {
-            type: "boolean",
-            description: "Filter issues that are blocked (optional)",
-          },
-          isBlocking: {
-            type: "boolean",
-            description:
-              "Filter issues that are blocking other issues (optional)",
-          },
-          isDuplicate: {
-            type: "boolean",
-            description: "Filter issues that are duplicates (optional)",
-          },
-          hasRelations: {
-            type: "boolean",
-            description: "Filter issues that have relations (optional)",
-          },
-          subscriberIds: {
-            type: "array",
-            items: {
-              type: "string",
-            },
-            description: "Filter by subscriber user IDs (optional)",
-          },
-          includeArchived: {
-            type: "boolean",
-            description: "Include archived issues (default: false)",
-          },
-          orderBy: {
-            type: "string",
-            enum: ["createdAt", "updatedAt", "priority"],
-            description: "Sort issues by field (optional)",
-          },
-          first: {
-            type: "number",
-            description: "Number of issues to return (default: 50)",
-          },
-        },
-      },
-    },
-    {
-      name: "update_issue",
-      description: "Update an existing issue",
-      inputSchema: {
-        type: "object",
-        properties: {
-          issueId: {
-            type: "string",
-            description: "Issue ID",
-          },
-          title: {
-            type: "string",
-            description: "New title (optional)",
-          },
-          description: {
-            type: "string",
-            description: "New description (optional)",
-          },
-          status: {
-            type: "string",
-            description: "New status (optional)",
-          },
-          assigneeId: {
-            type: "string",
-            description: "New assignee ID (optional)",
-          },
-          priority: {
-            type: "number",
-            description: "New priority (0-4, optional)",
-            minimum: 0,
-            maximum: 4,
-          },
-        },
-        required: ["issueId"],
-      },
-    },
-    {
-      name: "get_issue",
-      description: "Get detailed information about a specific issue",
-      inputSchema: {
-        type: "object",
-        properties: {
-          issueId: {
-            type: "string",
-            description: "Issue ID",
-          },
-        },
-        required: ["issueId"],
-      },
-    },
-    {
-      name: "search_issues",
-      description: "Search for issues using a text query",
-      inputSchema: {
-        type: "object",
-        properties: {
-          query: {
-            type: "string",
-            description: "Search query text",
-          },
-          first: {
-            type: "number",
-            description: "Number of results to return (default: 50)",
-          },
-        },
-        required: ["query"],
-      },
-    },
-    {
-      name: "list_teams",
-      description: "List all teams in the workspace",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-    },
-    {
-      name: "get_team",
-      description: "Get detailed information about a specific team",
-      inputSchema: {
-        type: "object",
-        properties: {
-          teamId: {
-            type: "string",
-            description: "Team ID",
-          },
-        },
-        required: ["teamId"],
-      },
-    },
-    {
-      name: "list_projects",
-      description: "List all projects with optional filters",
-      inputSchema: {
-        type: "object",
-        properties: {
-          first: {
-            type: "number",
-            description: "Number of projects to return (default: 50)",
-          },
-          after: {
-            type: "string",
-            description:
-              "Cursor for pagination - get projects after this cursor",
-          },
-          orderBy: {
-            type: "string",
-            enum: ["createdAt", "updatedAt"],
-            description: "Sort projects by field (createdAt, updatedAt)",
-          },
-          teamId: {
-            type: "string",
-            description:
-              "Filter by team ID - shows projects accessible to the specified team",
-          },
-          id: {
-            type: "string",
-            description: "Filter by project ID",
-          },
-          name: {
-            type: "string",
-            description: "Filter projects by name (supports partial matching)",
-          },
-          state: {
-            type: "string",
-            description:
-              "Filter by project state (backlog, planned, started, paused, completed, canceled)",
-          },
-          health: {
-            type: "string",
-            enum: ["onTrack", "atRisk", "offTrack"],
-            description: "Filter by project health status",
-          },
-          priority: {
-            type: "number",
-            description: "Filter by project priority (0-4)",
-          },
-          creatorId: {
-            type: "string",
-            description: "Filter by creator's user ID",
-          },
-          leadId: {
-            type: "string",
-            description: "Filter by project lead's user ID",
-          },
-          createdAfter: {
-            type: "string",
-            description: "Filter projects created after this date (ISO format)",
-          },
-          createdBefore: {
-            type: "string",
-            description:
-              "Filter projects created before this date (ISO format)",
-          },
-          updatedAfter: {
-            type: "string",
-            description: "Filter projects updated after this date (ISO format)",
-          },
-          updatedBefore: {
-            type: "string",
-            description:
-              "Filter projects updated before this date (ISO format)",
-          },
-          startDate: {
-            type: "string",
-            description: "Filter by project start date (ISO format)",
-          },
-          targetDate: {
-            type: "string",
-            description: "Filter by project target date (ISO format)",
-          },
-          completedAfter: {
-            type: "string",
-            description:
-              "Filter projects completed after this date (ISO format)",
-          },
-          completedBefore: {
-            type: "string",
-            description:
-              "Filter projects completed before this date (ISO format)",
-          },
-          canceledAfter: {
-            type: "string",
-            description:
-              "Filter projects canceled after this date (ISO format)",
-          },
-          canceledBefore: {
-            type: "string",
-            description:
-              "Filter projects canceled before this date (ISO format)",
-          },
-          hasBlocking: {
-            type: "boolean",
-            description: "Filter projects that are blocking other projects",
-          },
-          hasBlocked: {
-            type: "boolean",
-            description: "Filter projects that are blocked by other projects",
-          },
-        },
-      },
-    },
-    {
-      name: "get_project",
-      description: "Get detailed information about a specific project",
-      inputSchema: {
-        type: "object",
-        properties: {
-          projectId: {
-            type: "string",
-            description: "Project ID",
-          },
-        },
-        required: ["projectId"],
-      },
-    },
-    {
-      name: "list_roadmaps",
-      description: "List all roadmaps (previously called initiatives)",
-      inputSchema: {
-        type: "object",
-        properties: {
-          first: {
-            type: "number",
-            description:
-              "Number of roadmaps to return from the beginning (default: 50)",
-          },
-          last: {
-            type: "number",
-            description:
-              "Number of roadmaps to return from the end (alternative to first)",
-          },
-          after: {
-            type: "string",
-            description: "Cursor for forward pagination",
-          },
-          before: {
-            type: "string",
-            description: "Cursor for backward pagination",
-          },
-          includeArchived: {
-            type: "boolean",
-            description: "Include archived roadmaps (default: false)",
-          },
-          orderBy: {
-            type: "string",
-            description: "Sort roadmaps by field (createdAt, updatedAt)",
-            enum: ["createdAt", "updatedAt"],
-          },
-          includeProjects: {
-            type: "boolean",
-            description: "Include project IDs in the response (default: false)",
-          },
-        },
-      },
-    },
-    {
-      name: "get_roadmap",
-      description: "Get detailed information about a specific roadmap",
-      inputSchema: {
-        type: "object",
-        properties: {
-          roadmapId: {
-            type: "string",
-            description: "Roadmap ID",
-          },
-          includeProjects: {
-            type: "boolean",
-            description:
-              "Include project details in the response (default: true)",
-          },
-          includeArchived: {
-            type: "boolean",
-            description: "Include archived projects (default: false)",
-          },
-        },
-        required: ["roadmapId"],
-      },
-    },
-    {
-      name: "get_initiative",
-      description: "Get detailed information about a specific initiative",
-      inputSchema: {
-        type: "object",
-        properties: {
-          initiativeId: {
-            type: "string",
-            description: "Initiative ID",
-          },
-        },
-        required: ["initiativeId"],
-      },
-    },
-    // Comments
-    {
-      name: "create_comment",
-      description: "Create a new comment on an issue",
-      inputSchema: {
-        type: "object",
-        properties: {
-          issueId: {
-            type: "string",
-            description: "ID of the issue to comment on",
-          },
-          body: {
-            type: "string",
-            description: "Comment content (markdown supported)",
-          },
-        },
-        required: ["issueId", "body"],
-      },
-    },
-    {
-      name: "get_comment",
-      description: "Get a specific comment by ID",
-      inputSchema: {
-        type: "object",
-        properties: {
-          commentId: {
-            type: "string",
-            description: "Comment ID",
-          },
-        },
-        required: ["commentId"],
-      },
-    },
-    {
-      name: "update_comment",
-      description: "Update an existing comment",
-      inputSchema: {
-        type: "object",
-        properties: {
-          commentId: {
-            type: "string",
-            description: "Comment ID",
-          },
-          body: {
-            type: "string",
-            description: "Updated comment content (markdown supported)",
-          },
-        },
-        required: ["commentId", "body"],
-      },
-    },
-    {
-      name: "delete_comment",
-      description: "Delete a comment",
-      inputSchema: {
-        type: "object",
-        properties: {
-          commentId: {
-            type: "string",
-            description: "Comment ID",
-          },
-        },
-        required: ["commentId"],
-      },
-    },
-    // Labels
-    {
-      name: "list_labels",
-      description: "List all labels in a team",
-      inputSchema: {
-        type: "object",
-        properties: {
-          teamId: {
-            type: "string",
-            description: "Team ID to list labels from (optional)",
-          },
-          first: {
-            type: "number",
-            description: "Number of labels to return (default: 50)",
-          },
-        },
-      },
-    },
-    {
-      name: "get_label",
-      description: "Get detailed information about a specific label",
-      inputSchema: {
-        type: "object",
-        properties: {
-          labelId: {
-            type: "string",
-            description: "Label ID",
-          },
-        },
-        required: ["labelId"],
-      },
-    },
-    {
-      name: "create_label",
-      description: "Create a new label in a team",
-      inputSchema: {
-        type: "object",
-        properties: {
-          teamId: {
-            type: "string",
-            description: "Team ID where the label will be created",
-          },
-          name: {
-            type: "string",
-            description: "Label name",
-          },
-          color: {
-            type: "string",
-            description: "Label color (hex code, optional)",
-          },
-          description: {
-            type: "string",
-            description: "Label description (optional)",
-          },
-        },
-        required: ["teamId", "name"],
-      },
-    },
-    {
-      name: "update_label",
-      description: "Update an existing label",
-      inputSchema: {
-        type: "object",
-        properties: {
-          labelId: {
-            type: "string",
-            description: "Label ID",
-          },
-          name: {
-            type: "string",
-            description: "New label name (optional)",
-          },
-          color: {
-            type: "string",
-            description: "New label color (hex code, optional)",
-          },
-          description: {
-            type: "string",
-            description: "New label description (optional)",
-          },
-        },
-        required: ["labelId"],
-      },
-    },
-    // Cycles
-    {
-      name: "list_cycles",
-      description: "List all cycles in a team",
-      inputSchema: {
-        type: "object",
-        properties: {
-          teamId: {
-            type: "string",
-            description: "Team ID (optional)",
-          },
-          first: {
-            type: "number",
-            description: "Number of cycles to return (default: 50)",
-          },
-        },
-      },
-    },
-    {
-      name: "get_cycle",
-      description: "Get detailed information about a specific cycle",
-      inputSchema: {
-        type: "object",
-        properties: {
-          cycleId: {
-            type: "string",
-            description: "Cycle ID",
-          },
-          includeIssues: {
-            type: "boolean",
-            description:
-              "Include issues in the cycle response (default: false)",
-          },
-          first: {
-            type: "number",
-            description:
-              "Number of issues to return when includeIssues is true (default: 50, max: 100)",
-          },
-        },
-        required: ["cycleId"],
-      },
-    },
-    {
-      name: "create_cycle",
-      description: "Create a new cycle for a team",
-      inputSchema: {
-        type: "object",
-        properties: {
-          teamId: {
-            type: "string",
-            description: "Team ID",
-          },
-          name: {
-            type: "string",
-            description: "Cycle name",
-          },
-          description: {
-            type: "string",
-            description: "Cycle description (optional)",
-          },
-          startDate: {
-            type: "string",
-            description: "Cycle start date (ISO format, e.g. 2023-04-01)",
-          },
-          endDate: {
-            type: "string",
-            description: "Cycle end date (ISO format, e.g. 2023-04-15)",
-          },
-        },
-        required: ["teamId", "name", "startDate", "endDate"],
-      },
-    },
-    {
-      name: "update_cycle",
-      description: "Update an existing cycle",
-      inputSchema: {
-        type: "object",
-        properties: {
-          cycleId: {
-            type: "string",
-            description: "Cycle ID",
-          },
-          name: {
-            type: "string",
-            description: "New cycle name (optional)",
-          },
-          description: {
-            type: "string",
-            description: "New cycle description (optional)",
-          },
-          startDate: {
-            type: "string",
-            description: "New cycle start date (ISO format, optional)",
-          },
-          endDate: {
-            type: "string",
-            description: "New cycle end date (ISO format, optional)",
-          },
-        },
-        required: ["cycleId"],
-      },
-    },
-    // Documents
-    {
-      name: "list_documents",
-      description: "List all documents",
-      inputSchema: {
-        type: "object",
-        properties: {
-          teamId: {
-            type: "string",
-            description: "Team ID to filter documents (optional)",
-          },
-          first: {
-            type: "number",
-            description: "Number of documents to return (default: 50)",
-          },
-        },
-      },
-    },
-    {
-      name: "get_document",
-      description: "Get detailed information about a specific document",
-      inputSchema: {
-        type: "object",
-        properties: {
-          documentId: {
-            type: "string",
-            description: "Document ID",
-          },
-        },
-        required: ["documentId"],
-      },
-    },
-    {
-      name: "create_document",
-      description: "Create a new document",
-      inputSchema: {
-        type: "object",
-        properties: {
-          title: {
-            type: "string",
-            description: "Document title",
-          },
-          content: {
-            type: "string",
-            description: "Document content (markdown supported)",
-          },
-          teamId: {
-            type: "string",
-            description: "Team ID the document belongs to",
-          },
-          projectId: {
-            type: "string",
-            description:
-              "Project ID the document is associated with (optional)",
-          },
-        },
-        required: ["title", "content", "teamId"],
-      },
-    },
-    {
-      name: "update_document",
-      description: "Update an existing document",
-      inputSchema: {
-        type: "object",
-        properties: {
-          documentId: {
-            type: "string",
-            description: "Document ID",
-          },
-          title: {
-            type: "string",
-            description: "New document title (optional)",
-          },
-          content: {
-            type: "string",
-            description: "New document content (markdown supported, optional)",
-          },
-        },
-        required: ["documentId"],
-      },
-    },
-    // User tools
-    {
-      name: "list_users",
-      description: "List all users in the workspace",
-      inputSchema: {
-        type: "object",
-        properties: {
-          first: {
-            type: "number",
-            description: "Number of users to return (default: 50)",
-          },
-        },
-      },
-    },
-    {
-      name: "get_user",
-      description: "Get detailed information about a specific user",
-      inputSchema: {
-        type: "object",
-        properties: {
-          userId: {
-            type: "string",
-            description: "User ID",
-          },
-        },
-        required: ["userId"],
-      },
-    },
-    {
-      name: "me",
-      description: "Get information about the authenticated user",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-    },
-  ],
+  tools: READ_ONLY_MODE ? READ_TOOLS : [...READ_TOOLS, ...WRITE_TOOLS],
 }));
-
-/**
- * NOTE: All type definitions have been moved to src/schemas/index.ts
- * and are now imported at the top of this file.
- */
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
@@ -1078,29 +747,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     switch (request.params.name) {
       case "create_issue": {
-        // Use Zod schema for validation with the helper function
-        const args = validateRequest(
-          createIssueSchema,
-          request.params.arguments,
-        );
+        try {
+          const args = validateRequest(CallToolRequestSchema, request);
+          const validatedArgs = createIssueSchema.parse(args.params.arguments);
 
-        const issue = await linearClient.createIssue({
-          title: args.title,
-          description: args.description,
-          teamId: args.teamId,
-          assigneeId: args.assigneeId,
-          priority: args.priority,
-          labelIds: args.labels,
-        });
+          const issue = await linearClient.createIssue({
+            title: validatedArgs.title,
+            description: validatedArgs.description,
+            teamId: validatedArgs.teamId,
+            assigneeId: validatedArgs.assigneeId,
+            priority: validatedArgs.priority,
+            labelIds: validatedArgs.labels,
+          });
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(issue, null, 2),
-            },
-          ],
-        };
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(issue, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error creating issue:", error);
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Failed to create issue: ${error.message}`,
+              },
+            ],
+            isError: true,
+          };
+        }
       }
 
       case "list_issues": {
@@ -2140,25 +1819,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Comment tool handlers
       case "create_comment": {
-        const args = validateRequest(
-          createCommentSchema,
-          request.params.arguments,
-        );
-
         try {
+          const args = validateRequest(CallToolRequestSchema, request);
+          const validatedArgs = createCommentSchema.parse(
+            args.params.arguments,
+          );
+
           // Verify issue exists
-          const issue = await linearClient.issue(args.issueId);
+          const issue = await linearClient.issue(validatedArgs.issueId);
           if (!issue) {
             throw new McpError(
               ErrorCode.MethodNotFound,
-              `Issue not found: ${args.issueId}`,
+              `Issue not found: ${validatedArgs.issueId}`,
             );
           }
 
           // Create comment
           const commentPayload = await linearClient.createComment({
-            issueId: args.issueId,
-            body: args.body,
+            issueId: validatedArgs.issueId,
+            body: validatedArgs.body,
           });
 
           if (!commentPayload) {
@@ -2197,7 +1876,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                   avatarUrl: user.avatarUrl,
                 }
               : null,
-            issueId: args.issueId,
+            issueId: validatedArgs.issueId,
             createdAt: comment.createdAt,
             updatedAt: comment.updatedAt,
           };
@@ -2280,20 +1959,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "update_comment": {
-        const args = request.params.arguments as unknown as UpdateCommentArgs;
-
         try {
-          const comment = await linearClient.comment({ id: args.commentId });
+          const args = validateRequest(CallToolRequestSchema, request);
+          const validatedArgs = updateCommentSchema.parse(
+            args.params.arguments,
+          );
+
+          const comment = await linearClient.comment({
+            id: validatedArgs.commentId,
+          });
 
           if (!comment) {
             throw new McpError(
               ErrorCode.MethodNotFound,
-              `Comment not found: ${args.commentId}`,
+              `Comment not found: ${validatedArgs.commentId}`,
             );
           }
 
           const updatedComment = await comment.update({
-            body: args.body,
+            body: validatedArgs.body,
           });
 
           return {
@@ -2313,15 +1997,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "delete_comment": {
-        const args = request.params.arguments as unknown as DeleteCommentArgs;
-
         try {
-          const comment = await linearClient.comment({ id: args.commentId });
+          const args = validateRequest(CallToolRequestSchema, request);
+          const validatedArgs = deleteCommentSchema.parse(
+            args.params.arguments,
+          );
+
+          const comment = await linearClient.comment({
+            id: validatedArgs.commentId,
+          });
 
           if (!comment) {
             throw new McpError(
               ErrorCode.MethodNotFound,
-              `Comment not found: ${args.commentId}`,
+              `Comment not found: ${validatedArgs.commentId}`,
             );
           }
 
@@ -2879,19 +2568,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "me": {
         try {
           const user = await linearClient.viewer;
-          
+
           // Fetch teams directly using the built-in teams() method
           const teamsConnection = await user.teams();
-          const teams = teamsConnection.nodes.map(team => ({
+          const teams = teamsConnection.nodes.map((team) => ({
             id: team.id,
             name: team.name,
-            key: team.key
+            key: team.key,
           }));
-          
+
           // Add teams to user data
           const userData = {
             ...user,
-            teams
+            teams,
           };
 
           return {
