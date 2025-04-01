@@ -608,8 +608,7 @@ export class ToolHandlers {
         request.params.arguments,
       );
 
-      const issues = await this.linearClient.issueSearch({
-        query: args.query,
+      const issues = await this.linearClient.searchIssues(args.query, {
         first: args?.first || 50,
       });
 
