@@ -18,6 +18,25 @@ import {
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
 import { LinearClient } from "@linear/sdk";
+import {
+  CreateIssueArgs, ListIssuesArgs, UpdateIssueArgs, ListProjectsArgs,
+  SearchIssuesArgs, GetIssueArgs, ListRoadmapsArgs, GetInitiativeArgs,
+  CreateCommentArgs, GetCommentArgs, UpdateCommentArgs, DeleteCommentArgs,
+  ListLabelsArgs, CreateLabelArgs, UpdateLabelArgs, ListCyclesArgs,
+  CreateCycleArgs, UpdateCycleArgs, ListDocumentsArgs, CreateDocumentArgs,
+  UpdateDocumentArgs, ListUsersArgs, GetUserArgs, MeArgs, GetTeamArgs,
+  GetProjectArgs, GetRoadmapArgs, GetLabelArgs, GetCycleArgs, GetDocumentArgs,
+  // Zod schemas
+  createIssueSchema, listIssuesSchema, updateIssueSchema, listProjectsSchema,
+  searchIssuesSchema, getIssueSchema, listRoadmapsSchema, getInitiativeSchema,
+  createCommentSchema, getCommentSchema, updateCommentSchema, deleteCommentSchema,
+  listLabelsSchema, createLabelSchema, updateLabelSchema, listCyclesSchema,
+  createCycleSchema, updateCycleSchema, listDocumentsSchema, createDocumentSchema,
+  updateDocumentSchema, listUsersSchema, getUserSchema, meSchema, getTeamSchema,
+  getProjectSchema, getRoadmapSchema, getLabelSchema, getCycleSchema, getDocumentSchema,
+  // Utility functions
+  validateRequest
+} from "./schemas/index.js";
 
 const API_KEY = process.env.LINEAR_API_KEY || process.env.LINEARAPIKEY;
 if (!API_KEY) {
@@ -971,236 +990,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   ],
 }));
 
-type CreateIssueArgs = {
-  title: string;
-  description?: string;
-  teamId: string;
-  assigneeId?: string;
-  priority?: number;
-  labels?: string[];
-};
-
-type ListIssuesArgs = {
-  teamId?: string;
-  assigneeId?: string;
-  status?: string;
-  first?: number;
-  projectId?: string;
-  creatorId?: string;
-  priority?: number;
-  dueDate?: string;
-  dueDateGte?: string;
-  dueDateLte?: string;
-  createdAtGte?: string;
-  createdAtLte?: string;
-  updatedAtGte?: string;
-  updatedAtLte?: string;
-  completedAtGte?: string;
-  completedAtLte?: string;
-  canceledAtGte?: string;
-  canceledAtLte?: string;
-  startedAtGte?: string;
-  startedAtLte?: string;
-  archivedAtGte?: string;
-  archivedAtLte?: string;
-  title?: string;
-  titleContains?: string;
-  description?: string;
-  descriptionContains?: string;
-  number?: number;
-  labelIds?: string[];
-  cycleId?: string;
-  parentId?: string;
-  estimate?: number;
-  estimateGte?: number;
-  estimateLte?: number;
-  isBlocked?: boolean;
-  isBlocking?: boolean;
-  isDuplicate?: boolean;
-  hasRelations?: boolean;
-  subscriberIds?: string[];
-  includeArchived?: boolean;
-  orderBy?: "createdAt" | "updatedAt" | "priority";
-};
-
-type UpdateIssueArgs = {
-  issueId: string;
-  title?: string;
-  description?: string;
-  status?: string;
-  assigneeId?: string;
-  priority?: number;
-  labels?: string[];
-};
-
-// Update with all the fields defined in the input schema:
-type ListProjectsArgs = {
-  first?: number;
-  after?: string;
-  orderBy?: "createdAt" | "updatedAt";
-  teamId?: string;
-  id?: string;
-  name?: string;
-  state?: string;
-  health?: "onTrack" | "atRisk" | "offTrack";
-  priority?: number;
-  creatorId?: string;
-  leadId?: string;
-  createdAfter?: string;
-  createdBefore?: string;
-  updatedAfter?: string;
-  updatedBefore?: string;
-  startDate?: string;
-  targetDate?: string;
-  completedAfter?: string;
-  completedBefore?: string;
-  canceledAfter?: string;
-  canceledBefore?: string;
-  hasBlocking?: boolean;
-  hasBlocked?: boolean;
-};
-
-type SearchIssuesArgs = {
-  query: string;
-  first?: number;
-};
-
-type GetIssueArgs = {
-  issueId: string;
-};
-
-type ListRoadmapsArgs = {
-  first?: number;
-  last?: number;
-  after?: string;
-  before?: string;
-  includeArchived?: boolean;
-  orderBy?: 'createdAt' | 'updatedAt';
-  includeProjects?: boolean;
-};
-
-type GetInitiativeArgs = {
-  initiativeId: string;
-};
-
-// Comment types
-type CreateCommentArgs = {
-  issueId: string;
-  body: string;
-};
-
-type GetCommentArgs = {
-  commentId: string;
-};
-
-type UpdateCommentArgs = {
-  commentId: string;
-  body: string;
-};
-
-type DeleteCommentArgs = {
-  commentId: string;
-};
-
-// Label types
-type ListLabelsArgs = {
-  teamId?: string;
-  first?: number;
-};
-
-type CreateLabelArgs = {
-  teamId: string;
-  name: string;
-  color?: string;
-  description?: string;
-};
-
-type UpdateLabelArgs = {
-  labelId: string;
-  name?: string;
-  color?: string;
-  description?: string;
-};
-
-// Cycle types
-type ListCyclesArgs = {
-  teamId?: string;
-  first?: number;
-};
-
-type CreateCycleArgs = {
-  teamId: string;
-  name: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-};
-
-type UpdateCycleArgs = {
-  cycleId: string;
-  name?: string;
-  description?: string;
-  startDate?: string;
-  endDate?: string;
-};
-
-// Document types
-type ListDocumentsArgs = {
-  teamId?: string;
-  first?: number;
-};
-
-type CreateDocumentArgs = {
-  title: string;
-  content: string;
-  teamId: string;
-  projectId?: string;
-};
-
-type UpdateDocumentArgs = {
-  documentId: string;
-  title?: string;
-  content?: string;
-};
-
-// User types
-type ListUsersArgs = {
-  first?: number;
-};
-
-type GetUserArgs = {
-  userId: string;
-};
-
-type MeArgs = {};
-
-type GetTeamArgs = {
-  teamId: string;
-};
-
-type GetProjectArgs = {
-  projectId: string;
-};
-
-type GetRoadmapArgs = {
-  roadmapId: string;
-  includeProjects?: boolean;
-  includeArchived?: boolean; // Flag to include archived projects
-};
-
-type GetLabelArgs = {
-  labelId: string;
-};
-
-type GetCycleArgs = {
-  cycleId: string;
-  includeIssues?: boolean;
-  first?: number; // Number of issues to return when includeIssues is true
-};
-
-type GetDocumentArgs = {
-  documentId: string;
-};
+/** 
+ * NOTE: All type definitions have been moved to src/schemas/index.ts
+ * and are now imported at the top of this file.
+ */
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
@@ -1209,11 +1002,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     
     switch (request.params.name) {
       case "create_issue": {
-        const args = request.params.arguments as unknown as CreateIssueArgs;
-        if (!args?.title || !args?.teamId) {
-          throw new Error("Title and teamId are required");
-        }
-
+        // Use Zod schema for validation with the helper function
+        const args = validateRequest(createIssueSchema, request.params.arguments);
+        
         const issue = await linearClient.createIssue({
           title: args.title,
           description: args.description,
@@ -1234,7 +1025,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "list_issues": {
-        const args = request.params.arguments as unknown as ListIssuesArgs;
+        // Use Zod schema for validation with the helper function
+        const args = validateRequest(listIssuesSchema, request.params.arguments);
+        
         const filter: Record<string, any> = {};
         
         // Team filter
@@ -1506,28 +1299,46 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "update_issue": {
-        const args = request.params.arguments as unknown as UpdateIssueArgs;
-        if (!args?.issueId) {
-          throw new Error("Issue ID is required");
-        }
-
+        // Use Zod schema for validation with the helper function
+        const args = validateRequest(updateIssueSchema, request.params.arguments);
+        
+        // Get the issue to update
         const issue = await linearClient.issue(args.issueId);
+        
         if (!issue) {
           throw new McpError(
             ErrorCode.MethodNotFound,
-            `Issue not found: ${args.issueId}`
+            `Issue with ID ${args.issueId} not found`
           );
         }
-
-        const updatedIssue = await issue.update({
-          title: args.title,
-          description: args.description,
-          stateId: args.status,
-          assigneeId: args.assigneeId,
-          labelIds: args.labels,
-          priority: args.priority,
-        });
-
+        
+        // Build update object
+        const updateData: Record<string, any> = {};
+        if (args.title) updateData.title = args.title;
+        if (args.description !== undefined) updateData.description = args.description;
+        if (args.status) {
+          // Find workflow state by name
+          const team = await issue.team;
+          if (team) {
+            const states = await team.states();
+            const state = states.nodes.find((s: any) => s.name.toLowerCase() === args.status!.toLowerCase());
+            if (state) {
+              updateData.stateId = state.id;
+            } else {
+              throw new McpError(
+                ErrorCode.InvalidParams,
+                `Status "${args.status}" not found in team workflow`
+              );
+            }
+          }
+        }
+        if (args.assigneeId !== undefined) updateData.assigneeId = args.assigneeId || null;
+        if (args.priority !== undefined) updateData.priority = args.priority;
+        if (args.labels) updateData.labelIds = args.labels;
+        
+        // Update issue
+        const updatedIssue = await issue.update(updateData);
+        
         return {
           content: [
             {
@@ -1568,129 +1379,134 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "list_projects": {
-        const args = request.params.arguments as unknown as ListProjectsArgs;
+        const args = validateRequest(listProjectsSchema, request.params.arguments);
         
-        const { first = 50, after, orderBy, teamId, id, name, state, createdAfter, createdBefore, 
-          updatedAfter, updatedBefore, startDate, targetDate, completedAfter, completedBefore, 
-          canceledAfter, canceledBefore, health, priority, creatorId, leadId, hasBlocking, hasBlocked } = args;
-        
-        // Build the filter object based on provided arguments
-        const filter: any = {};
-        
-        if (id) filter.id = { eq: id };
-        if (name) filter.name = { contains: name };
-        if (state) filter.state = { eq: state };
-        if (teamId) filter.accessibleTeams = { some: { id: { eq: teamId } } };
-        if (health) filter.health = { eq: health };
-        if (priority !== undefined) filter.priority = { eq: priority };
-        
-        if (creatorId) filter.creator = { id: { eq: creatorId } };
-        if (leadId) filter.lead = { id: { eq: leadId } };
-        
-        // Date filters
-        if (createdAfter || createdBefore) {
-          filter.createdAt = {};
-          if (createdAfter) filter.createdAt.gte = createdAfter;
-          if (createdBefore) filter.createdAt.lte = createdBefore;
-        }
-        
-        if (updatedAfter || updatedBefore) {
-          filter.updatedAt = {};
-          if (updatedAfter) filter.updatedAt.gte = updatedAfter;
-          if (updatedBefore) filter.updatedAt.lte = updatedBefore;
-        }
-        
-        if (startDate) filter.startDate = { eq: startDate };
-        if (targetDate) filter.targetDate = { eq: targetDate };
-        
-        if (completedAfter || completedBefore) {
-          filter.completedAt = {};
-          if (completedAfter) filter.completedAt.gte = completedAfter;
-          if (completedBefore) filter.completedAt.lte = completedBefore;
-        }
-        
-        if (canceledAfter || canceledBefore) {
-          filter.canceledAt = {};
-          if (canceledAfter) filter.canceledAt.gte = canceledAfter;
-          if (canceledBefore) filter.canceledAt.lte = canceledBefore;
-        }
-        
-        if (hasBlocking) filter.hasBlockingRelations = { exists: hasBlocking };
-        if (hasBlocked) filter.hasBlockedByRelations = { exists: hasBlocked };
-        
-        // Prepare query options
-        const queryVariables: any = {
-          first,
-          filter
-        };
-        
-        if (after) queryVariables.after = after;
-        if (orderBy) queryVariables.orderBy = orderBy;
-
         try {
-          // Use the SDK's projects method instead of raw GraphQL
-          const projectsConnection = await linearClient.projects(queryVariables);
+          // Build filter object from args
+          const filter: Record<string, any> = {};
           
-          // Process the projects data
-          const projects = await Promise.all(
-            projectsConnection.nodes.map(async (project) => {
-              // Fetch related data for each project
-              const [creator, lead, teams] = await Promise.all([
-                project.creator,
-                project.lead,
-                project.teams ? project.teams() : { nodes: [] }
-              ]);
-              
-              return {
-                id: project.id,
-                name: project.name,
-                description: project.description,
-                state: project.state,
-                createdAt: project.createdAt,
-                updatedAt: project.updatedAt,
-                completedAt: project.completedAt || null,
-                canceledAt: project.canceledAt || null,
-                startDate: project.startDate || null,
-                targetDate: project.targetDate || null,
-                health: project.health || null,
-                priority: project.priority !== undefined ? project.priority : null,
-                creator: creator ? {
-                  id: creator.id,
-                  name: creator.name,
-                  email: creator.email
-                } : null,
-                lead: lead ? {
-                  id: lead.id,
-                  name: lead.name,
-                  email: lead.email
-                } : null,
-                teams: teams && teams.nodes ? 
-                  teams.nodes.map((team: any) => ({
-                    id: team.id,
-                    name: team.name,
-                    key: team.key
-                  })) : []
-              };
-            })
-          );
-
-          // Include pagination information
-          const responseData = {
-            projects,
-            pageInfo: {
-              hasNextPage: projectsConnection.pageInfo.hasNextPage,
-              endCursor: projectsConnection.pageInfo.endCursor
-            }
+          // Apply filters based on provided arguments
+          if (args.teamId) filter.team = { id: { eq: args.teamId } };
+          if (args.id) filter.id = { eq: args.id };
+          if (args.name) filter.name = { eq: args.name };
+          if (args.state) filter.state = { eq: args.state };
+          if (args.health) filter.health = { eq: args.health };
+          if (args.priority !== undefined) filter.priority = { eq: args.priority };
+          if (args.creatorId) filter.creator = { id: { eq: args.creatorId } };
+          if (args.leadId) filter.lead = { id: { eq: args.leadId } };
+          
+          // Date filters
+          if (args.createdAfter || args.createdBefore) {
+            filter.createdAt = {};
+            if (args.createdAfter) filter.createdAt.gte = args.createdAfter;
+            if (args.createdBefore) filter.createdAt.lte = args.createdBefore;
+          }
+          
+          if (args.updatedAfter || args.updatedBefore) {
+            filter.updatedAt = {};
+            if (args.updatedAfter) filter.updatedAt.gte = args.updatedAfter;
+            if (args.updatedBefore) filter.updatedAt.lte = args.updatedBefore;
+          }
+          
+          if (args.startDate) filter.startDate = { eq: args.startDate };
+          if (args.targetDate) filter.targetDate = { eq: args.targetDate };
+          
+          if (args.completedAfter || args.completedBefore) {
+            filter.completedAt = {};
+            if (args.completedAfter) filter.completedAt.gte = args.completedAfter;
+            if (args.completedBefore) filter.completedAt.lte = args.completedBefore;
+          }
+          
+          if (args.canceledAfter || args.canceledBefore) {
+            filter.canceledAt = {};
+            if (args.canceledAfter) filter.canceledAt.gte = args.canceledAfter;
+            if (args.canceledBefore) filter.canceledAt.lte = args.canceledBefore;
+          }
+          
+          // Relation filters
+          if (args.hasBlocking) filter.hasBlockingIssues = { eq: true };
+          if (args.hasBlocked) filter.hasBlockedIssues = { eq: true };
+          
+          // Prepare query options
+          const queryVariables: any = {
+            first: args?.first ?? 50,
+            filter
           };
+          
+          if (args?.after) queryVariables.after = args.after;
+          if (args?.orderBy) queryVariables.orderBy = args.orderBy;
 
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(responseData, null, 2),
-              },
-            ],
-          };
+          try {
+            // Use the SDK's projects method instead of raw GraphQL
+            const projectsConnection = await linearClient.projects(queryVariables);
+            
+            // Process the projects data
+            const projects = await Promise.all(
+              projectsConnection.nodes.map(async (project) => {
+                // Fetch related data for each project
+                const [creator, lead, teams] = await Promise.all([
+                  project.creator,
+                  project.lead,
+                  project.teams ? project.teams() : { nodes: [] }
+                ]);
+                
+                return {
+                  id: project.id,
+                  name: project.name,
+                  description: project.description,
+                  state: project.state,
+                  createdAt: project.createdAt,
+                  updatedAt: project.updatedAt,
+                  completedAt: project.completedAt || null,
+                  canceledAt: project.canceledAt || null,
+                  startDate: project.startDate || null,
+                  targetDate: project.targetDate || null,
+                  health: project.health || null,
+                  priority: project.priority !== undefined ? project.priority : null,
+                  creator: creator ? {
+                    id: creator.id,
+                    name: creator.name,
+                    email: creator.email
+                  } : null,
+                  lead: lead ? {
+                    id: lead.id,
+                    name: lead.name,
+                    email: lead.email
+                  } : null,
+                  teams: teams && teams.nodes ? 
+                    teams.nodes.map((team: any) => ({
+                      id: team.id,
+                      name: team.name,
+                      key: team.key
+                    })) : []
+                };
+              })
+            );
+
+            // Include pagination information
+            const responseData = {
+              projects,
+              pageInfo: {
+                hasNextPage: projectsConnection.pageInfo.hasNextPage,
+                endCursor: projectsConnection.pageInfo.endCursor
+              }
+            };
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(responseData, null, 2),
+                },
+              ],
+            };
+          } catch (error: any) {
+            console.error("Error listing projects:", error);
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Failed to list projects: ${error.message}`
+            );
+          }
         } catch (error: any) {
           console.error("Error listing projects:", error);
           throw new McpError(
@@ -1701,245 +1517,316 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "search_issues": {
-        const args = request.params.arguments as unknown as SearchIssuesArgs;
-        if (!args?.query) {
-          throw new Error("Search query is required");
+        const args = validateRequest(searchIssuesSchema, request.params.arguments);
+        
+        try {
+          // Prepare query options
+          const queryVariables = {
+            first: args.first ?? 50,
+            query: args.query,
+          };
+          
+          // Execute search
+          const issues = await linearClient.issueSearch(queryVariables);
+
+          // Process and format the results
+          const formattedIssues = await Promise.all(
+            issues.nodes.map(async (issue) => {
+              // Fetch related data in parallel for performance
+              const [
+                state,
+                assignee,
+                team,
+                project
+              ] = await Promise.all([
+                issue.state,
+                issue.assignee,
+                issue.team,
+                issue.project,
+              ]);
+              
+              // Format the issue
+              return {
+                id: issue.id,
+                title: issue.title,
+                description: issue.description,
+                identifier: issue.identifier,
+                priority: issue.priority,
+                url: issue.url,
+                number: issue.number,
+                state: state ? {
+                  id: state.id,
+                  name: state.name,
+                  color: state.color,
+                  type: state.type
+                } : null,
+                assignee: assignee ? {
+                  id: assignee.id,
+                  name: assignee.name,
+                  email: assignee.email,
+                  displayName: assignee.displayName,
+                  avatarUrl: assignee.avatarUrl,
+                } : null,
+                team: team ? {
+                  id: team.id,
+                  name: team.name,
+                  key: team.key
+                } : null,
+                project: project ? {
+                  id: project.id,
+                  name: project.name
+                } : null,
+                createdAt: issue.createdAt,
+                updatedAt: issue.updatedAt,
+              };
+            })
+          );
+
+          // Add pagination info
+          const responseWithPagination = {
+            issues: formattedIssues,
+            pagination: {
+              hasNextPage: issues.pageInfo.hasNextPage,
+              endCursor: issues.pageInfo.endCursor
+            }
+          };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(responseWithPagination, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error searching issues:", error);
+          
+          if (error.message && error.message.includes('Rate limit exceeded')) {
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Linear API rate limit exceeded. Try again later or use smaller page sizes.`
+            );
+          }
+          
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to search issues: ${error.message}`
+          );
+        }
+      }
+
+      case "get_issue": {
+        // Use Zod schema for validation with the helper function
+        const args = validateRequest(getIssueSchema, request.params.arguments);
+        
+        // Get issue by ID
+        const issue = await linearClient.issue(args.issueId);
+        
+        if (!issue) {
+          throw new McpError(
+            ErrorCode.MethodNotFound,
+            `Issue with ID ${args.issueId} not found`
+          );
+        }
+      
+        // Fetch related data in parallel for performance
+        const [
+          state,
+          assignee,
+          project,
+          team,
+          creator,
+          cycle,
+          parent,
+          labels,
+          subscribers,
+          children,
+          relations,
+          comments,
+          attachments
+        ] = await Promise.all([
+          issue.state,
+          issue.assignee,
+          issue.project,
+          issue.team,
+          issue.creator,
+          issue.cycle,
+          issue.parent,
+          issue.labels(),
+          issue.subscribers(),
+          issue.children(),
+          issue.relations(),
+          issue.comments(),
+          issue.attachments()
+        ]);
+      
+        // Process labels
+        const labelsList = labels ? 
+          labels.nodes.map((label: any) => ({
+            id: label.id,
+            name: label.name,
+            color: label.color
+          })) : [];
+        
+        const issueDetails: {
+          id: string;
+          identifier: string;
+          title: string;
+          description: string | undefined;
+          priority: number;
+          priorityLabel: string;
+          status: string;
+          url: string;
+          createdAt: Date;
+          updatedAt: Date;
+          startedAt: Date | null;
+          completedAt: Date | null;
+          canceledAt: Date | null;
+          dueDate: string | null;
+          assignee: { id: string; name: string; email: string } | null;
+          creator: { id: string; name: string; email: string } | null;
+          team: { id: string; name: string; key: string } | null;
+          project: { id: string; name: string; state: string } | null;
+          parent: { id: string; title: string; identifier: string } | null;
+          cycle: { id: string; name: string; number: number } | null;
+          labels: Array<{ id: string; name: string; color: string }>;
+          comments: Array<{ id: string; body: string; createdAt: Date }>;
+          attachments: Array<{ id: string; title: string; url: string }>;
+          embeddedImages: Array<{ url: string; analysis: string }>;
+          estimate: number | null;
+          customerTicketCount: number;
+          previousIdentifiers: string[];
+          branchName: string;
+          archivedAt: Date | null;
+          autoArchivedAt: Date | null;
+          autoClosedAt: Date | null;
+          trashed: boolean;
+        } = {
+          id: issue.id,
+          identifier: issue.identifier,
+          title: issue.title,
+          description: issue.description,
+          priority: issue.priority,
+          priorityLabel: issue.priorityLabel,
+          status: state ? await state.name : "Unknown",
+          url: issue.url,
+          createdAt: issue.createdAt,
+          updatedAt: issue.updatedAt,
+          startedAt: issue.startedAt || null,
+          completedAt: issue.completedAt || null,
+          canceledAt: issue.canceledAt || null,
+          dueDate: issue.dueDate,
+          assignee: assignee
+            ? {
+                id: assignee.id,
+                name: assignee.name,
+                email: assignee.email,
+              }
+            : null,
+          creator: creator
+            ? {
+                id: creator.id,
+                name: creator.name,
+                email: creator.email,
+              }
+            : null,
+          team: team
+            ? {
+                id: team.id,
+                name: team.name,
+                key: team.key,
+              }
+            : null,
+          project: project
+            ? {
+                id: project.id,
+                name: project.name,
+                state: project.state,
+              }
+            : null,
+          parent: parent
+            ? {
+                id: parent.id,
+                title: parent.title,
+                identifier: parent.identifier,
+              }
+            : null,
+          cycle:
+            cycle && cycle.name
+              ? {
+                  id: cycle.id,
+                  name: cycle.name,
+                  number: cycle.number,
+                }
+              : null,
+          labels: await Promise.all(
+            labels.nodes.map(async (label: any) => ({
+              id: label.id,
+              name: label.name,
+              color: label.color,
+            }))
+          ),
+          comments: await Promise.all(
+            comments.nodes.map(async (comment: any) => ({
+              id: comment.id,
+              body: comment.body,
+              createdAt: comment.createdAt,
+            }))
+          ),
+          attachments: await Promise.all(
+            attachments.nodes.map(async (attachment: any) => ({
+              id: attachment.id,
+              title: attachment.title,
+              url: attachment.url,
+            }))
+          ),
+          embeddedImages: [],
+          estimate: issue.estimate || null,
+          customerTicketCount: issue.customerTicketCount || 0,
+          previousIdentifiers: issue.previousIdentifiers || [],
+          branchName: issue.branchName || "",
+          archivedAt: issue.archivedAt || null,
+          autoArchivedAt: issue.autoArchivedAt || null,
+          autoClosedAt: issue.autoClosedAt || null,
+          trashed: issue.trashed || false,
+        };
+
+        // Extract embedded images from description
+        const imageMatches =
+          issue.description?.match(/!\[.*?\]\((.*?)\)/g) || [];
+        if (imageMatches.length > 0) {
+          issueDetails.embeddedImages = imageMatches.map((match) => {
+            const url = (match as string).match(/\((.*?)\)/)?.[1] || "";
+            return {
+              url,
+              analysis: "Image analysis would go here", // Replace with actual image analysis if available
+            };
+          });
         }
 
-        const searchResults = await linearClient.searchIssues(args.query, {
-          first: args?.first ?? 50,
-        });
-
-        const formattedResults = await Promise.all(
-          searchResults.nodes.map(async (result) => {
-            const state = await result.state;
-            const assignee = await result.assignee;
-            return {
-              id: result.id,
-              title: result.title,
-              status: state ? await state.name : "Unknown",
-              assignee: assignee ? assignee.name : "Unassigned",
-              priority: result.priority,
-              url: result.url,
-              metadata: result.metadata,
-            };
-          })
+        // Add image analysis for attachments if they are images
+        issueDetails.attachments = await Promise.all(
+          attachments.nodes
+            .filter((attachment: any) =>
+              attachment.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+            )
+            .map(async (attachment: any) => ({
+              id: attachment.id,
+              title: attachment.title,
+              url: attachment.url,
+              analysis: "Image analysis would go here", // Replace with actual image analysis if available
+            }))
         );
 
         return {
           content: [
             {
               type: "text",
-              text: JSON.stringify(formattedResults, null, 2),
+              text: JSON.stringify(issueDetails, null, 2),
             },
           ],
         };
-      }
-
-      case "get_issue": {
-        const args = request.params.arguments as unknown as GetIssueArgs;
-        if (!args?.issueId) {
-          throw new Error("Issue ID is required");
-        }
-
-        const issue = await linearClient.issue(args.issueId);
-        if (!issue) {
-          throw new McpError(
-            ErrorCode.MethodNotFound,
-            `Issue not found: ${args.issueId}`
-          );
-        }
-
-        try {
-          const [
-            state,
-            assignee,
-            creator,
-            team,
-            project,
-            parent,
-            cycle,
-            labels,
-            comments,
-            attachments,
-          ] = await Promise.all([
-            issue.state,
-            issue.assignee,
-            issue.creator,
-            issue.team,
-            issue.project,
-            issue.parent,
-            issue.cycle,
-            issue.labels(),
-            issue.comments(),
-            issue.attachments(),
-          ]);
-
-          const issueDetails: {
-            id: string;
-            identifier: string;
-            title: string;
-            description: string | undefined;
-            priority: number;
-            priorityLabel: string;
-            status: string;
-            url: string;
-            createdAt: Date;
-            updatedAt: Date;
-            startedAt: Date | null;
-            completedAt: Date | null;
-            canceledAt: Date | null;
-            dueDate: string | null;
-            assignee: { id: string; name: string; email: string } | null;
-            creator: { id: string; name: string; email: string } | null;
-            team: { id: string; name: string; key: string } | null;
-            project: { id: string; name: string; state: string } | null;
-            parent: { id: string; title: string; identifier: string } | null;
-            cycle: { id: string; name: string; number: number } | null;
-            labels: Array<{ id: string; name: string; color: string }>;
-            comments: Array<{ id: string; body: string; createdAt: Date }>;
-            attachments: Array<{ id: string; title: string; url: string }>;
-            embeddedImages: Array<{ url: string; analysis: string }>;
-            estimate: number | null;
-            customerTicketCount: number;
-            previousIdentifiers: string[];
-            branchName: string;
-            archivedAt: Date | null;
-            autoArchivedAt: Date | null;
-            autoClosedAt: Date | null;
-            trashed: boolean;
-          } = {
-            id: issue.id,
-            identifier: issue.identifier,
-            title: issue.title,
-            description: issue.description,
-            priority: issue.priority,
-            priorityLabel: issue.priorityLabel,
-            status: state ? await state.name : "Unknown",
-            url: issue.url,
-            createdAt: issue.createdAt,
-            updatedAt: issue.updatedAt,
-            startedAt: issue.startedAt || null,
-            completedAt: issue.completedAt || null,
-            canceledAt: issue.canceledAt || null,
-            dueDate: issue.dueDate,
-            assignee: assignee
-              ? {
-                  id: assignee.id,
-                  name: assignee.name,
-                  email: assignee.email,
-                }
-              : null,
-            creator: creator
-              ? {
-                  id: creator.id,
-                  name: creator.name,
-                  email: creator.email,
-                }
-              : null,
-            team: team
-              ? {
-                  id: team.id,
-                  name: team.name,
-                  key: team.key,
-                }
-              : null,
-            project: project
-              ? {
-                  id: project.id,
-                  name: project.name,
-                  state: project.state,
-                }
-              : null,
-            parent: parent
-              ? {
-                  id: parent.id,
-                  title: parent.title,
-                  identifier: parent.identifier,
-                }
-              : null,
-            cycle:
-              cycle && cycle.name
-                ? {
-                    id: cycle.id,
-                    name: cycle.name,
-                    number: cycle.number,
-                  }
-                : null,
-            labels: await Promise.all(
-              labels.nodes.map(async (label: any) => ({
-                id: label.id,
-                name: label.name,
-                color: label.color,
-              }))
-            ),
-            comments: await Promise.all(
-              comments.nodes.map(async (comment: any) => ({
-                id: comment.id,
-                body: comment.body,
-                createdAt: comment.createdAt,
-              }))
-            ),
-            attachments: await Promise.all(
-              attachments.nodes.map(async (attachment: any) => ({
-                id: attachment.id,
-                title: attachment.title,
-                url: attachment.url,
-              }))
-            ),
-            embeddedImages: [],
-            estimate: issue.estimate || null,
-            customerTicketCount: issue.customerTicketCount || 0,
-            previousIdentifiers: issue.previousIdentifiers || [],
-            branchName: issue.branchName || "",
-            archivedAt: issue.archivedAt || null,
-            autoArchivedAt: issue.autoArchivedAt || null,
-            autoClosedAt: issue.autoClosedAt || null,
-            trashed: issue.trashed || false,
-          };
-
-          // Extract embedded images from description
-          const imageMatches =
-            issue.description?.match(/!\[.*?\]\((.*?)\)/g) || [];
-          if (imageMatches.length > 0) {
-            issueDetails.embeddedImages = imageMatches.map((match) => {
-              const url = (match as string).match(/\((.*?)\)/)?.[1] || "";
-              return {
-                url,
-                analysis: "Image analysis would go here", // Replace with actual image analysis if available
-              };
-            });
-          }
-
-          // Add image analysis for attachments if they are images
-          issueDetails.attachments = await Promise.all(
-            attachments.nodes
-              .filter((attachment: any) =>
-                attachment.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-              )
-              .map(async (attachment: any) => ({
-                id: attachment.id,
-                title: attachment.title,
-                url: attachment.url,
-                analysis: "Image analysis would go here", // Replace with actual image analysis if available
-              }))
-          );
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(issueDetails, null, 2),
-              },
-            ],
-          };
-        } catch (error: any) {
-          console.error("Error processing issue details:", error);
-          throw new McpError(
-            ErrorCode.InternalError,
-            `Failed to process issue details: ${error.message}`
-          );
-        }
       }
 
       case "list_roadmaps": {
@@ -2047,31 +1934,68 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "get_initiative": {
-        const args = request.params.arguments as unknown as GetInitiativeArgs;
-        const initiative = await linearClient.initiative(args.initiativeId);
+        const args = validateRequest(getInitiativeSchema, request.params.arguments);
         
-        if (!initiative) {
+        try {
+          const initiative = await linearClient.initiative(args.initiativeId);
+          
+          if (!initiative) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Initiative not found: ${args.initiativeId}`
+            );
+          }
+
+          // Fetch creator if available
+          const creator = await initiative.creator;
+          
+          // Format the initiative response
+          const initiativeDetails = {
+            id: initiative.id,
+            name: initiative.name,
+            description: initiative.description,
+            creator: creator ? {
+              id: creator.id,
+              name: creator.name,
+              email: creator.email,
+              displayName: creator.displayName,
+              avatarUrl: creator.avatarUrl
+            } : null,
+            createdAt: initiative.createdAt,
+            updatedAt: initiative.updatedAt,
+            targetDate: initiative.targetDate,
+            sortOrder: initiative.sortOrder,
+            url: initiative.url
+          };
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(initiativeDetails, null, 2),
+              },
+            ],
+          };
+        } catch (error: any) {
+          console.error("Error fetching initiative:", error);
+          
+          if (error instanceof McpError) {
+            throw error;
+          }
+          
           throw new McpError(
-            ErrorCode.MethodNotFound,
-            `Initiative not found: ${args.initiativeId}`
+            ErrorCode.InternalError,
+            `Failed to get initiative details: ${error.message}`
           );
         }
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(initiative, null, 2),
-            },
-          ],
-        };
       }
 
       // Comment tool handlers
       case "create_comment": {
-        const args = request.params.arguments as unknown as CreateCommentArgs;
+        const args = validateRequest(createCommentSchema, request.params.arguments);
         
         try {
+          // Verify issue exists
           const issue = await linearClient.issue(args.issueId);
           if (!issue) {
             throw new McpError(
@@ -2080,20 +2004,66 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             );
           }
           
-          const comment = await linearClient.createComment({
+          // Create comment
+          const commentPayload = await linearClient.createComment({
             issueId: args.issueId,
-            body: args.body,
+            body: args.body
           });
-
+          
+          if (!commentPayload) {
+            throw new McpError(
+              ErrorCode.InternalError,
+              "Failed to create comment"
+            );
+          }
+          
+          // The comment is returned in the payload
+          const commentFetch = commentPayload.comment;
+          if (!commentFetch) {
+            throw new McpError(
+              ErrorCode.InternalError,
+              "Comment was created but no comment data was returned"
+            );
+          }
+          
+          // We need to await all properties
+          const comment = await commentFetch;
+          
+          // Fetch the user who created the comment
+          const userFetch = comment.user;
+          const user = userFetch ? await userFetch : null;
+          
+          // Format response
+          const commentData = {
+            id: comment.id,
+            body: comment.body,
+            user: user ? {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              displayName: user.displayName,
+              avatarUrl: user.avatarUrl
+            } : null,
+            issueId: args.issueId,
+            createdAt: comment.createdAt,
+            updatedAt: comment.updatedAt
+          };
+          
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(comment, null, 2),
+                text: JSON.stringify(commentData, null, 2),
               },
             ],
           };
         } catch (error: any) {
+          console.error("Error creating comment:", error);
+          
+          if (error instanceof McpError) {
+            throw error;
+          }
+          
           throw new McpError(
             ErrorCode.InternalError,
             `Failed to create comment: ${error.message}`

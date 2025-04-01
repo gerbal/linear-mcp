@@ -28,7 +28,8 @@
   "dependencies": {
     "@linear/sdk": "38.0.0",
     "@modelcontextprotocol/sdk": "1.6.1",
-    "dotenv": "16.4.7"
+    "dotenv": "16.4.7",
+    "zod": "3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.24",
