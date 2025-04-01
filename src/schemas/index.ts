@@ -1,34 +1,37 @@
-import { z } from 'zod';
+import { z } from "zod";
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 
 /**
  * Validate and parse request parameters using a Zod schema
- * 
+ *
  * @param schema Zod schema to validate against
  * @param data Data to validate
  * @returns Validated and typed data
  * @throws McpError if validation fails
  */
-export function validateRequest<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
+export function validateRequest<T extends z.ZodType>(
+  schema: T,
+  data: unknown,
+): z.infer<T> {
   try {
     const result = schema.safeParse(data);
-    
+
     if (!result.success) {
       throw new McpError(
         ErrorCode.InvalidParams,
-        `Validation error: ${formatZodError(result.error)}`
+        `Validation error: ${formatZodError(result.error)}`,
       );
     }
-    
+
     return result.data;
   } catch (error) {
     if (error instanceof McpError) {
       throw error;
     }
-    
+
     throw new McpError(
       ErrorCode.InvalidParams,
-      `Invalid parameters: ${error instanceof Error ? error.message : String(error)}`
+      `Invalid parameters: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }
@@ -38,8 +41,8 @@ export function validateRequest<T extends z.ZodType>(schema: T, data: unknown): 
  */
 function formatZodError(error: z.ZodError): string {
   return error.errors
-    .map(err => `${err.path.join('.')}: ${err.message}`)
-    .join(', ');
+    .map((err) => `${err.path.join(".")}: ${err.message}`)
+    .join(", ");
 }
 
 // Issue schemas
@@ -92,7 +95,7 @@ export const listIssuesSchema = z.object({
   hasRelations: z.boolean().optional(),
   subscriberIds: z.array(z.string()).optional(),
   includeArchived: z.boolean().optional(),
-  orderBy: z.enum(['createdAt', 'updatedAt', 'priority']).optional(),
+  orderBy: z.enum(["createdAt", "updatedAt", "priority"]).optional(),
 });
 
 export const updateIssueSchema = z.object({
@@ -109,12 +112,12 @@ export const updateIssueSchema = z.object({
 export const listProjectsSchema = z.object({
   first: z.number().optional(),
   after: z.string().optional(),
-  orderBy: z.enum(['createdAt', 'updatedAt']).optional(),
+  orderBy: z.enum(["createdAt", "updatedAt"]).optional(),
   teamId: z.string().optional(),
   id: z.string().optional(),
   name: z.string().optional(),
   state: z.string().optional(),
-  health: z.enum(['onTrack', 'atRisk', 'offTrack']).optional(),
+  health: z.enum(["onTrack", "atRisk", "offTrack"]).optional(),
   priority: z.number().optional(),
   creatorId: z.string().optional(),
   leadId: z.string().optional(),
@@ -150,7 +153,7 @@ export const listRoadmapsSchema = z.object({
   after: z.string().optional(),
   before: z.string().optional(),
   includeArchived: z.boolean().optional(),
-  orderBy: z.enum(['createdAt', 'updatedAt']).optional(),
+  orderBy: z.enum(["createdAt", "updatedAt"]).optional(),
   includeProjects: z.boolean().optional(),
 });
 
@@ -307,4 +310,4 @@ export type GetProjectArgs = z.infer<typeof getProjectSchema>;
 export type GetRoadmapArgs = z.infer<typeof getRoadmapSchema>;
 export type GetLabelArgs = z.infer<typeof getLabelSchema>;
 export type GetCycleArgs = z.infer<typeof getCycleSchema>;
-export type GetDocumentArgs = z.infer<typeof getDocumentSchema>; 
+export type GetDocumentArgs = z.infer<typeof getDocumentSchema>;
