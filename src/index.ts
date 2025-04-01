@@ -2879,12 +2879,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "me": {
         try {
           const user = await linearClient.viewer;
+          
+          // Fetch teams directly using the built-in teams() method
+          const teamsConnection = await user.teams();
+          const teams = teamsConnection.nodes.map(team => ({
+            id: team.id,
+            name: team.name,
+            key: team.key
+          }));
+          
+          // Add teams to user data
+          const userData = {
+            ...user,
+            teams
+          };
 
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(user, null, 2),
+                text: JSON.stringify(userData, null, 2),
               },
             ],
           };
