@@ -20,6 +20,32 @@ export const READ_TOOLS: Tool[] = [
           type: "string",
           description: "Filter by status (optional)",
         },
+        projectId: {
+          type: "string",
+          description: "Filter by project ID (optional)",
+        },
+        creatorId: {
+          type: "string",
+          description: "Filter by creator ID (optional)",
+        },
+        priority: {
+          type: "number",
+          description: "Filter by priority (0-4, optional)",
+          minimum: 0,
+          maximum: 4,
+        },
+        dueDate: {
+          type: "string",
+          description: "Filter by exact due date (YYYY-MM-DD, optional)",
+        },
+        dueDateGte: {
+          type: "string",
+          description: "Filter by due date greater than or equal to (YYYY-MM-DD, optional)",
+        },
+        dueDateLte: {
+          type: "string",
+          description: "Filter by due date less than or equal to (YYYY-MM-DD, optional)",
+        },
         first: {
           type: "number",
           description: "Number of issues to return (default: 50)",
@@ -557,16 +583,12 @@ export const WRITE_TOOLS: Tool[] = [
           type: "string",
           description: "Document content (markdown supported)",
         },
-        teamId: {
-          type: "string",
-          description: "Team ID the document belongs to",
-        },
         projectId: {
           type: "string",
-          description: "Project ID the document is associated with (optional)",
+          description: "Project ID the document is associated with",
         },
       },
-      required: ["title", "content", "teamId"],
+      required: ["title", "content", "projectId"],
     },
   },
   {

@@ -510,11 +510,33 @@ export class ToolHandlers {
         );
       }
 
+      // const issues = await project.issues({ first: 100 });
+      // const issuesData = await Promise.all(issues.nodes.map(async (issue) => {
+      //   const state = await issue.state;
+      //   return {
+      //     ...issue,
+      //     state: state?.name
+      //   };
+      // }));
+
+      const history = await project.history({ first: 100 });
+      const historyData = history.nodes;
+
+      const projectUpdates = await project.projectUpdates({ first: 100 });
+      const projectUpdatesData = projectUpdates.nodes;
+
+      const projectData = {
+        ...project,
+        // issues: issuesData,
+        history: historyData,
+        projectUpdates: projectUpdatesData,
+      };
+
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(project, null, 2),
+            text: JSON.stringify(projectData, null, 2),
           },
         ],
       };
